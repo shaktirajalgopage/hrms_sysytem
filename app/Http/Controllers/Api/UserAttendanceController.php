@@ -16,7 +16,7 @@ class UserAttendanceController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     private const OFFICE_LAT    = 20.282603;
     private const OFFICE_LNG    = 85.857688;
-    private const OFFICE_RADIUS = 1000; // metres
+    private const OFFICE_RADIUS = 500; // metres
 
 
     public function checkin(Request $request): JsonResponse

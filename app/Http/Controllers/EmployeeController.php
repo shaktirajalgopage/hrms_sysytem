@@ -16,6 +16,10 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeController extends Controller
 {
@@ -475,4 +479,65 @@ class EmployeeController extends Controller
             return null;
         }
     }
+    public function export(Request $request): StreamedResponse
+{
+    $query = Employee::with(['department', 'schedule']);
+
+    if ($request->filled('department_id')) {
+        $query->where('department_id', $request->department_id);
+    }
+
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function ($q) use ($search) {
+            $q->where('firstname', 'like', "%{$search}%")
+              ->orWhere('lastname', 'like', "%{$search}%")
+              ->orWhere('unique_id', 'like', "%{$search}%");
+        });
+    }
+
+    $employees = $query->latest()->get();
+
+    $spreadsheet = new Spreadsheet();
+    $sheet       = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Employees');
+
+    // Header row
+    $headings = ['SL', 'Emp ID', 'Name of Employee', 'Email', 'Department', 'Schedule', 'Date Joined'];
+    $sheet->fromArray($headings, null, 'A1');
+    $sheet->getStyle('A1:G1')->getFont()->setBold(true);
+    $sheet->getStyle('A1:G1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+    // Data rows
+    $row = 2;
+    foreach ($employees as $index => $employee) {
+        $sheet->fromArray([
+            $index + 1,
+            $employee->unique_id,
+            trim($employee->firstname . ' ' . $employee->lastname),
+            $employee->email ?? '-',
+            $employee->department->title ?? '-',
+            $employee->schedule->title ?? '-',
+            $employee->created_at->format('Y-m-d'),
+        ], null, "A{$row}");
+        $row++;
+    }
+
+    // Auto-size all columns
+    foreach (range('A', 'G') as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+
+    $filename = 'employees-' . now()->format('Y-m-d_His') . '.xlsx';
+
+    $writer = new Xlsx($spreadsheet);
+
+    return response()->streamDownload(function () use ($writer) {
+        $writer->save('php://output');
+    }, $filename, [
+        'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        'Cache-Control'       => 'max-age=0',
+    ]);
+}
 }

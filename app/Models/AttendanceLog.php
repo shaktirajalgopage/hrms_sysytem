@@ -29,7 +29,8 @@ class AttendanceLog extends Model
         'platform',
         'user_agent',
         'checkout_status',
-        'checkin_status'
+        'checkin_status',
+        'is_auto_checkout'
     ];
 
     protected $casts = [
@@ -39,6 +40,7 @@ class AttendanceLog extends Model
         'checkin_longitude' => 'float',
         'checkout_latitude'  => 'float',
         'checkout_longitude' => 'float',
+         'is_auto_checkout' => 'boolean',
     ];
 
     public function user(): BelongsTo

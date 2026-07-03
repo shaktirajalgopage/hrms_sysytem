@@ -509,4 +509,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+// super-admin
+Route::get('employee/export', [EmployeeController::class, 'export'])->name('employee.export');
+
+// administrator
+Route::get('admin/employee/export', [EmployeeController::class, 'export'])->name('admin.employee.export');
+
+// hr-manager
+Route::get('hr/employee/export', [EmployeeController::class, 'export'])->name('hr.employee.export');
+
 require __DIR__.'/auth.php';
