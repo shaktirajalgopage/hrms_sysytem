@@ -1,5 +1,11 @@
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('title')
     {{ __('Manage Notifications') }}
 @endsection
@@ -7,7 +13,7 @@
 @section('header')
   <div class="d-flex align-items-center justify-content-between mb-4">
     <h1 class="h3">{{ __('App Notifications') }}</h1>
-    <a href="{{ route('user-notifications.create') }}" class="btn btn-primary">
+    <a href="{{ route("{$routePrefix}user-notifications.create") }}" class="btn btn-primary">
       <i class="fas fa-plus"></i>
       <span class="ps-1">{{ __('Create Notification') }}</span>
     </a>
@@ -66,7 +72,7 @@
     <div class="col-12">
         <div class="card flex-fill">
             <div class="card-header bg-white border-bottom py-3">
-                <form action="{{ route('user-notifications.index') }}" method="GET" class="row g-2">
+                <form action="{{ route("{$routePrefix}user-notifications.index") }}" method="GET" class="row g-2">
                     <div class="col-md-4">
                         <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search title...">
                     </div>
@@ -152,24 +158,24 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="btn-group">
-                                        <a href="{{ route('user-notifications.show', $notification) }}" class="btn btn-sm btn-light border" title="View details">
+                                        <a href="{{ route("{$routePrefix}user-notifications.show", $notification) }}" class="btn btn-sm btn-light border" title="View details">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         @if($notification->status !== 'sent')
-                                            <a href="{{ route('user-notifications.edit', $notification) }}" class="btn btn-sm btn-light border text-primary" title="Edit">
+                                            <a href="{{ route("{$routePrefix}user-notifications.edit", $notification) }}" class="btn btn-sm btn-light border text-primary" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <form action="{{ route('user-notifications.sendNow', $notification) }}" method="POST" class="d-inline">
+                                            <form action="{{ route("{$routePrefix}user-notifications.sendNow", $notification) }}" method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit" class="btn btn-sm btn-light border text-success" title="Send Now" onclick="return confirm('Send this notification immediately?')">
                                                     <i class="fas fa-paper-plane"></i>
                                                 </button>
                                             </form>
                                         @endif
-                                        <a href="{{ route('user-notifications.duplicate', $notification) }}" class="btn btn-sm btn-light border text-info" title="Duplicate">
+                                        <a href="{{ route("{$routePrefix}user-notifications.duplicate", $notification) }}" class="btn btn-sm btn-light border text-info" title="Duplicate">
                                             <i class="fas fa-copy"></i>
                                         </a>
-                                        <form action="{{ route('user-notifications.destroy', $notification) }}" method="POST" class="d-inline">
+                                        <form action="{{ route("{$routePrefix}user-notifications.destroy", $notification) }}" method="POST" class="d-inline">
                                             @csrf @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-light border text-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this?')">
                                                 <i class="fas fa-trash"></i>

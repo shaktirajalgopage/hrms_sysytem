@@ -350,7 +350,7 @@
 {{-- ═══════════════════════════════════════════════
      ATTENDANCE MODAL (shared for check-in & check-out)
      ═══════════════════════════════════════════════ --}}
-<div class="modal fade" id="attendanceModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="attendanceModal" tabindex="-1" aria-hidden="true" >
     <div class="modal-dialog modal-dialog-scrollable" style="max-width: 480px;">
         <div class="modal-content border-0 shadow">
 
@@ -369,7 +369,8 @@
             <div class="modal-body pt-3">
 
                 {{-- Checkin time badge (shown during checkout modal) --}}
-                <div id="checkinTimeBadge" class="d-none alert py-2 px-3 mb-3 d-flex align-items-center gap-2"
+                <div id="checkinTimeBadge"
+     class="alert py-2 px-3 mb-3 align-items-center gap-2 d-none"
                     style="font-size:0.82rem;background:#fff3cd;border:1px solid #ffc107;color:#856404;">
                     <i data-feather="clock" style="width:14px;height:14px;flex-shrink:0;"></i>
                     <span>Checked in at: <strong id="checkinTimeText"></strong></span>
@@ -447,24 +448,42 @@
         width: 550px !important;
         max-width: 100% !important;
         border-radius: 18px !important;
-        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04) !important;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
         padding: 1.5rem !important;
     }
+
     .swal2-show-custom {
         animation: swal2-slide-down 0.3s ease-out forwards;
     }
+
     @keyframes swal2-slide-down {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
+
     .swal2-backdrop-blur {
         background: rgba(15, 23, 42, 0.6) !important;
         backdrop-filter: blur(6px) !important;
         -webkit-backdrop-filter: blur(6px) !important;
     }
+
     #attendanceMap {
         z-index: 1;
     }
+
+    .modal.fade:not(.show) {
+    display: none !important;
+}
+
+    
+
     .transition-all {
         transition: all 0.2s ease-in-out;
     }

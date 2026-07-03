@@ -1,5 +1,12 @@
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
+
 @section('title')
     {{ __('Attendance Logs') }}
 @endsection
@@ -8,7 +15,7 @@
   <div class="d-flex align-items-center justify-content-between mb-4">
     <h1 class="h3">{{ __('Attendance Logs') }}</h1>
     <div class="d-flex gap-2">
-      <a href="{{ route('attendance-list.index') }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ route($routePrefix . 'attendance-list.index') }}" class="btn btn-outline-secondary btn-sm">
         <i class="fas fa-sync-alt"></i>
         <span class="ps-1">{{ __('Refresh') }}</span>
       </a>
@@ -89,7 +96,7 @@
 {{-- ── Filter Form ── --}}
 <div class="card mb-4 shadow-sm">
   <div class="card-body py-3">
-    <form method="GET" action="{{ route('attendance-list.index') }}" class="row g-2 align-items-end">
+    <form method="GET" action="{{ route($routePrefix . 'attendance-list.index') }}" class="row g-2 align-items-end">
       {{-- Search --}}
       <div class="col-md-3">
         <label class="form-label mb-1" style="font-size:12px;font-weight:600">Search</label>
@@ -138,7 +145,7 @@
           <i class="fas fa-filter"></i>
         </button>
         @if(request()->hasAny(['search','user_id','status','date_from','date_to']))
-          <a href="{{ route('attendance-list.index') }}" class="btn btn-outline-secondary btn-sm px-2">
+          <a href="{{ route($routePrefix . 'attendance-list.index') }}" class="btn btn-outline-secondary btn-sm px-2">
             <i class="fas fa-times"></i>
           </a>
         @endif
@@ -322,14 +329,14 @@
                 <td>
                   <div class="d-flex gap-1">
                     {{-- View detail --}}
-                    <a href="{{ route('attendance-list.show', $log->id) }}"
+                    <a href="{{ route($routePrefix . 'attendance-list.show', $log->id) }}"
                        class="btn btn-outline-info btn-sm" title="View Details">
                       <i class="fas fa-eye"></i>
                     </a>
 
                     {{-- Force checkout (only for active) --}}
                     @if($log->status === 'active')
-                      <form action="{{ route('attendance-list.force-checkout', $log->id) }}"
+                      <form action="{{ route($routePrefix . 'attendance-list.force-checkout', $log->id) }}"
                             method="POST" style="display:inline">
                         @csrf
                         @method('PATCH')
@@ -343,7 +350,7 @@
                     @endif
 
                     {{-- Delete --}}
-                    <form action="{{ route('attendance-list.destroy', $log->id) }}"
+                    <form action="{{ route($routePrefix . 'attendance-list.destroy', $log->id) }}"
                           method="POST" style="display:inline">
                       @csrf
                       @method('DELETE')

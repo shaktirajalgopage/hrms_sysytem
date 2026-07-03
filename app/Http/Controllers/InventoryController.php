@@ -36,7 +36,7 @@ public function store(Request $request)
     Inventory::create([
         'asset_type' => $request->asset_type,
         'message' => $request->message,
-        'status' => $request->status,
+        'status' => 'Available',
     ]);
 
     return redirect()

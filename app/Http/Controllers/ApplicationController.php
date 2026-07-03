@@ -16,6 +16,13 @@ use Illuminate\Support\Facades\Storage;
 
 class ApplicationController extends Controller
 {
+
+private function routePrefix()
+{
+    return auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+}
     // ─── Index (List View) ────────────────────────────────────────────────────
 
     public function index(Request $request)
@@ -151,7 +158,7 @@ class ApplicationController extends Controller
             $this->logActivity($application, 'cv_uploaded', 'Application created and CV uploaded');
         });
 
-        return redirect()->route('applications.index')
+        return redirect()->route("{$this->routePrefix()}applications.index")
             ->with('success', 'Application submitted successfully.');
     }
 
@@ -234,7 +241,7 @@ class ApplicationController extends Controller
             ]);
         });
 
-        return redirect()->route('applications.show', $application)
+        return redirect()->route("{$this->routePrefix()}applications.show", $application)
             ->with('success', 'Application updated successfully.');
     }
 

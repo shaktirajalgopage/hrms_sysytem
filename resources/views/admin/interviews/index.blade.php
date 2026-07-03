@@ -1,5 +1,11 @@
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('title')
     {{ __('Interview Pipeline') }}
 @endsection
@@ -8,11 +14,11 @@
   <div class="d-flex align-items-center justify-content-between mb-4">
     <h1 class="h3">{{ __('Interview Pipeline') }}</h1>
     <div class="d-flex gap-2">
-      <a href="{{ route('kanban') }}" class="btn btn-outline-secondary">
+      <a href="{{ route($routePrefix . 'kanban') }}" class="btn btn-outline-secondary">
         <i class="fas fa-columns"></i>
         <span class="ps-1">{{ __('Kanban View') }}</span>
       </a>
-      <a href="{{ route('applications.create') }}" class="btn btn-primary">
+      <a href="{{ route($routePrefix . 'applications.create') }}" class="btn btn-primary">
         <i class="fas fa-plus"></i>
         <span class="ps-1">{{ __('Add Candidate') }}</span>
       </a>
@@ -75,7 +81,7 @@
     @foreach($stages as $key => $stage)
         @if($key !== 'rejected')
         <div class="col">
-            <a href="{{ route('applications.index', ['stage' => $key]) }}"
+            <a href="{{ route($routePrefix . 'applications.index', ['stage' => $key]) }}"
                class="card text-decoration-none {{ request('stage') === $key ? 'border-primary' : '' }}">
                 <div class="card-body py-2 px-3 text-center">
                     <div class="small text-muted">{{ $stage['label'] }}</div>
@@ -94,7 +100,7 @@
     <div class="col-12">
         <div class="card flex-fill">
             <div class="card-header bg-white border-bottom py-3">
-                <form action="{{ route('applications.index') }}" method="GET" class="row g-2">
+                <form action="{{ route($routePrefix . 'applications.index') }}" method="GET" class="row g-2">
                     <div class="col-md-3">
                         <input type="text" name="search" value="{{ request('search') }}"
                                class="form-control" placeholder="Search name or email...">
@@ -205,21 +211,21 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="btn-group">
-                                        <a href="{{ route('applications.show', $app) }}"
+                                        <a href="{{ route($routePrefix . 'applications.show', $app) }}"
                                            class="btn btn-sm btn-light border" title="View">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         @if($app->candidate->hasCv())
-                                            <a href="{{ route('cv.download', $app) }}"
+                                            <a href="{{ route($routePrefix . 'cv.download', $app) }}"
                                                class="btn btn-sm btn-light border text-info" title="Download CV">
                                                 <i class="fas fa-file-download"></i>
                                             </a>
                                         @endif
-                                        <a href="{{ route('applications.edit', $app) }}"
+                                        <a href="{{ route($routePrefix . 'applications.edit', $app) }}"
                                            class="btn btn-sm btn-light border text-primary" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form action="{{ route('applications.destroy', $app) }}"
+                                        <form action="{{ route($routePrefix . 'applications.destroy', $app) }}"
                                               method="POST" class="d-inline">
                                             @csrf @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-light border text-danger"

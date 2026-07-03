@@ -1,15 +1,21 @@
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('content')
 <div class="container-fluid px-4 py-4 bg-white">
     <div class="mb-4 no-print d-flex justify-content-between align-items-center border-bottom pb-2">
-        <a href="{{ route('salary-slip.index') }}" class="btn btn-link text-secondary p-0 font-weight-medium">
+        <a href="{{ route("{$routePrefix}salary-slip.index") }}" class="btn btn-link text-secondary p-0 font-weight-medium">
             <i class="fas fa-arrow-left mr-2"></i>Back to Salary Slips Overview
         </a>
         <span class="text-muted small">Modification Engine Layer</span>
     </div>
 
-    <form action="{{ route('salary-slip.update', $slip->id) }}" method="POST" id="salarySlipForm">
+    <form action="{{ route("{$routePrefix}salary-slip.update", $slip->id) }}" method="POST" id="salarySlipForm">
         @csrf
         @method('PUT')
         

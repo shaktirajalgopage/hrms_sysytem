@@ -8,8 +8,24 @@
 <div class="d-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-3">Asset Management</h1>
 
-    <a href="{{ route('employee-assets.create') }}"
-       class="btn btn-primary">
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ route('employee-assets.bulk-view') }}" class="btn btn-outline-primary">
+            <i class="fas fa-file-import"></i>
+            <span class="ps-1">Bulk Assign Assets</span>
+        </a>
+        <a href="{{ route('employee-assets.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            <span class="ps-1">Assign Asset</span>
+        </a>
+    </div>
+</div>
+@endsection
+
+@section('header')
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-3">Asset Management</h1>
+
+    <a href="{{ route('employee-assets.create') }}" class="btn btn-primary">
         <i class="fas fa-plus"></i>
         <span class="ps-1">Assign Asset</span>
     </a>
@@ -56,7 +72,7 @@
                             <strong>
                                 {{ $asset->employee->firstname ?? '' }}
                                 {{ $asset->employee->lastname ?? '' }}
-                            </strong>
+                            </strong> 
                         </td>
 
                         <td>
@@ -67,7 +83,7 @@
                                 @endphp
 
                                 @foreach($details as $item)
-                                    <div class="mb-2 pb-2 @if(!$loop->last) border-bottom border-light @endif">
+                                    <div class="mb-3 pb-2 @if(!$loop->last) border-bottom border-light @endif">
                                         <div class="d-flex flex-wrap align-items-center gap-1 mb-1">
                                             <span class="badge bg-primary">
                                                 {{ $item['asset'] ?? $asset->asset_name }}
@@ -78,11 +94,10 @@
                                         </div>
 
                                         @if(!empty($item['items']))
-                                            <div class="ps-2 mt-1 text-muted row g-1" style="font-size: 0.825rem; max-width: 450px;">
+                                            <div class="ps-2 mt-1 text-muted row g-1" style="font-size: 0.825rem; max-width: 550px;">
                                                 @foreach($item['items'] as $index => $subItem)
-                                                    <div class="col-12 d-flex flex-wrap align-items-center gap-1">
-                                                        <span class="text-secondary font-monospace fw-bold">#{{ $index + 1 }}:</span>
-                                                        
+                                                    <div class="col-12 d-flex flex-wrap align-items-center gap-1 mb-1">
+<span class="text-secondary font-monospace fw-bold">#{{ sprintf('%02d', $index + 1) }}:</span>                                                        
                                                         @if(isset($subItem['serial_no']))
                                                             <span class="bg-light px-2 py-0.5 rounded border small text-dark">SN: <strong class="font-monospace">{{ $subItem['serial_no'] }}</strong></span>
                                                         @endif
@@ -95,16 +110,36 @@
                                                             <span class="bg-light px-2 py-0.5 rounded border small text-dark">Mon: <strong class="font-monospace">{{ $subItem['monitor_serial_no'] }}</strong></span>
                                                         @endif
 
-                                                        @if(isset($subItem['imei']))
-                                                            <span class="bg-light px-2 py-0.5 rounded border small text-dark">IMEI: <strong class="font-monospace">{{ $subItem['imei'] }}</strong></span>
+                                                        @if(isset($subItem['brand']))
+                                                            <span class="bg-light px-2 py-0.5 rounded border small text-dark">Brand: <strong>{{ $subItem['brand'] }}</strong></span>
                                                         @endif
 
-                                                        @if(isset($subItem['sim_provider']))
-                                                            <span class="bg-light px-2 py-0.5 rounded border small text-dark">SIM: <strong>{{ $subItem['sim_provider'] }}</strong></span>
+                                                        @if(isset($subItem['model']))
+                                                            <span class="bg-light px-2 py-0.5 rounded border small text-dark">Model: <strong>{{ $subItem['model'] }}</strong></span>
                                                         @endif
 
-                                                        @if(isset($subItem['plan_days']))
-                                                            <span class="bg-light px-2 py-0.5 rounded border small text-dark">Plan: <strong>{{ $subItem['plan_days'] }} Days</strong></span>
+                                                        @if(isset($subItem['network']))
+                                                            <span class="bg-light px-2 py-0.5 rounded border small text-dark">Net: <strong>{{ $subItem['network'] }}</strong></span>
+                                                        @endif
+
+                                                        @if(isset($subItem['ram_rom']))
+                                                            <span class="bg-light px-2 py-0.5 rounded border small text-dark">RAM/ROM: <strong>{{ $subItem['ram_rom'] }}</strong></span>
+                                                        @endif
+
+                                                        @if(isset($subItem['sim_number']))
+                                                            <span class="bg-light px-2 py-0.5 rounded border small text-dark">SIM No: <strong class="font-monospace text-danger">{{ $subItem['sim_number'] }}</strong></span>
+                                                        @endif
+
+                                                        @if(isset($subItem['imei_1']))
+                                                            <span class="bg-light px-2 py-0.5 rounded border small text-dark">IMEI 1: <strong class="font-monospace">{{ $subItem['imei_1'] }}</strong></span>
+                                                        @endif
+
+                                                        @if(isset($subItem['imei_2']))
+                                                            <span class="bg-light px-2 py-0.5 rounded border small text-dark">IMEI 2: <strong class="font-monospace">{{ $subItem['imei_2'] }}</strong></span>
+                                                        @endif
+
+                                                        @if(isset($subItem['charger']))
+                                                            <span class="bg-light px-2 py-0.5 rounded border small text-dark">Charger: <strong>{{ $subItem['charger'] }}</strong></span>
                                                         @endif
                                                     </div>
                                                 @endforeach
@@ -121,21 +156,13 @@
 
                         <td>
                             @if($asset->status == 'Assigned')
-                                <span class="badge bg-success">
-                                    Assigned
-                                </span>
+                                <span class="badge bg-success">Assigned</span>
                             @elseif($asset->status == 'Returned')
-                                <span class="badge bg-info">
-                                    Returned
-                                </span>
+                                <span class="badge bg-info">Returned</span>
                             @elseif($asset->status == 'Damaged')
-                                <span class="badge bg-warning">
-                                    Damaged
-                                </span>
+                                <span class="badge bg-warning">Damaged</span>
                             @else
-                                <span class="badge bg-danger">
-                                    Lost
-                                </span>
+                                <span class="badge bg-danger">Lost</span>
                             @endif
                         </td>
 
@@ -160,9 +187,7 @@
                                     <i class="fas fa-clipboard-list"></i>
                                 </a>
 
-                                <form action="{{ route('employee-assets.destroy', $asset->id) }}"
-                                      method="POST"
-                                      class="m-0">
+                                <form action="{{ route('employee-assets.destroy', $asset->id) }}" method="POST" class="m-0">
                                     @csrf
                                     @method('DELETE')
                                     <a href="#"

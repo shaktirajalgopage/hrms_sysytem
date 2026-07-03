@@ -15,6 +15,14 @@ use App\Models\Role;
 
 class UserNotificationController extends Controller
 {
+
+
+private function routePrefix()
+{
+    return auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+}
     public function __construct(private NotificationService $service) {}
 
     // ─── Index ────────────────────────────────────────────────────────────────
@@ -73,13 +81,13 @@ class UserNotificationController extends Controller
                 ? "✅ {$result['message']}"
                 : "❌ {$result['message']}";
 
-            return redirect()->route('user-notifications.index')
+            return redirect()->route($this->routePrefix() . 'user-notifications.index')
                              ->with($result['success'] ? 'success' : 'error', $msg);
         }
 
         if ($request->action === 'schedule' && !empty($data['scheduled_at'])) {
             $this->service->schedule($data, auth()->id());
-            return redirect()->route('user-notifications.index')
+            return redirect()->route($this->routePrefix() . 'user-notifications.index')
                              ->with('success', '📅 Notification scheduled successfully.');
         }
 
@@ -87,7 +95,7 @@ class UserNotificationController extends Controller
         $data['status'] = 'draft';
         UserAppNotificastion::create($data);
 
-        return redirect()->route('user-notifications.index')
+        return redirect()->route($this->routePrefix() . 'user-notifications.index')
                          ->with('success', '💾 Notification saved as draft.');
     }
 
@@ -135,7 +143,7 @@ class UserNotificationController extends Controller
 
         $notification->update($request->validated());
 
-        return redirect()->route('user-notifications.index')
+        return redirect()->route($this->routePrefix() . ' user-notifications.index')
                          ->with('success', 'Notification updated successfully.');
     }
 

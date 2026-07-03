@@ -1,11 +1,17 @@
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('title') {{ __('Create Notification') }} @endsection
 
 @section('header')
   <div class="d-flex align-items-center justify-content-between mb-4">
     <h1 class="h3">{{ __('Create New Notification') }}</h1>
-    <a href="{{ route('user-notifications.index') }}" class="btn btn-light border">Back to List</a>
+    <a href="{{ route("{$routePrefix}user-notifications.index") }}" class="btn btn-light border">Back to List</a>
   </div>
 @endsection
 
@@ -14,7 +20,7 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-body">
-                <form action="{{ route('user-notifications.store') }}" method="POST">
+                <form action="{{ route("{$routePrefix}user-notifications.store") }}" method="POST">
                     @csrf
                     
                     <div class="mb-3">
