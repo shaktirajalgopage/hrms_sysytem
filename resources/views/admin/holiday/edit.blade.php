@@ -1,5 +1,11 @@
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('title')
     {{ __('Edit Holiday') }}
 @endsection
@@ -7,7 +13,7 @@
 @section('header')
   <div class="d-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-3">Edit Holiday</h1>
-    <a href="{{ route('holiday.index') }}" class="btn btn-secondary">
+    <a href="{{ route($routePrefix . 'holiday.index') }}" class="btn btn-secondary">
       <i class="fas fa-arrow-left"></i> Back to List
     </a>
   </div>
@@ -21,7 +27,7 @@
           <h5 class="card-title mb-0">Modify Holiday Details</h5>
         </div>
         <div class="card-body">
-          <form action="{{ route('holiday.update', $holiday->id) }}" method="POST">
+          <form action="{{ route($routePrefix . 'holiday.update', $holiday->id) }}" method="POST">
             @csrf
             @method('PUT')
 

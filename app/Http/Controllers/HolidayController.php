@@ -9,6 +9,14 @@ use Carbon\Carbon;
 
 class HolidayController extends Controller
 {
+
+
+private function routePrefix()
+{
+    return auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+}
     /**
      * Display a listing of the resource.
      */
@@ -46,7 +54,7 @@ class HolidayController extends Controller
     Holiday::create($validated);
 
     return redirect()
-        ->route('holiday.index')
+        ->route($this->routePrefix() . 'holiday.index')
         ->with('success', 'Holiday created successfully.');
 }
 
@@ -93,7 +101,7 @@ class HolidayController extends Controller
     $holiday->update($validated);
 
     return redirect()
-        ->route('holiday.index')
+        ->route($this->routePrefix() . 'holiday.index')
         ->with('success', 'Holiday updated successfully.');
 }
 
@@ -105,7 +113,7 @@ class HolidayController extends Controller
         $holiday = Holiday::findOrFail($id);
         $holiday->delete();
 
-        return redirect()->route('holiday.index')->with('success', 'Holiday deleted successfully.');
+        return redirect()->route($this->routePrefix() . 'holiday.index')->with('success', 'Holiday deleted successfully.');
     }
 
     /**

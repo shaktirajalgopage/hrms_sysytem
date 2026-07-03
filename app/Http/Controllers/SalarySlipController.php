@@ -11,6 +11,15 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class SalarySlipController extends Controller
 {
+
+
+
+private function routePrefix()
+{
+    return auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+}
     public function index()
     {
         $slips = SalarySlip::with('employee.department', 'employee.designation')
@@ -27,7 +36,7 @@ class SalarySlipController extends Controller
     public function store(StoreSalarySlipRequest $request)
     {
         SalarySlip::create($request->validated());
-        return redirect()->route('salary-slip.index')->with('success', 'Salary Slip created successfully.');
+        return redirect()->route($this->routePrefix() . 'salary-slip.index')->with('success', 'Salary Slip created successfully.');
     }
 
     public function show($id)
@@ -46,7 +55,7 @@ class SalarySlipController extends Controller
     {
         $slip = SalarySlip::findOrFail($id);
         $slip->update($request->validated());
-        return redirect()->route('salary-slip.index')->with('success', 'Salary Slip updated successfully.');
+        return redirect()->route($this->routePrefix() . 'salary-slip.index')->with('success', 'Salary Slip updated successfully.');
     }
 
     public function destroy($id)

@@ -48,7 +48,6 @@
                         @php
                             $parsedDetails = is_string($employeeAsset->asset_details) ? json_decode($employeeAsset->asset_details, true) : ($employeeAsset->asset_details ?? []);
                             
-                            // Map existing items directly by dynamic database Inventory key IDs
                             $selectedAssetsMap = [];
                             foreach(($parsedDetails ?? []) as $detail) {
                                 if (isset($detail['inventory_id'])) {
@@ -141,14 +140,12 @@
                     <div class="col-xl-3 col-lg-4 mb-4 mb-lg-0">
                         <div class="card border-0 bg-light bg-opacity-50 p-3 rounded-4 sticky-top border border-light-subtle" style="top: 24px; z-index: 10;">
                             <span class="text-secondary small fw-bold text-uppercase tracking-wider mb-3 d-block">Allocation Tree</span>
-                            <div id="allocation-sidebar-list" class="d-flex flex-column gap-2">
-                                </div>
+                            <div id="allocation-sidebar-list" class="d-flex flex-column gap-2"></div>
                         </div>
                     </div>
                     
                     <div class="col-xl-9 col-lg-8">
-                        <div id="dynamic-asset-details-container" class="d-flex flex-column gap-4">
-                            </div>
+                        <div id="dynamic-asset-details-container" class="d-flex flex-column gap-4"></div>
                     </div>
                 </div>
 
@@ -235,15 +232,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const assetIcons = { 'Laptop': '💻', 'Desktop': '🖥', 'Mouse': '🖱', 'Keyboard': '⌨', 'Mobile': '📱' };
     
-    // Read historical maps directly using unique Inventory Key IDs
     const databaseAssetsState = @json($selectedAssetsMap);
 
+    // FIX: Initialize UI state elements for historically checked backend assets on DOM load
     checkboxes.forEach(checkbox => {
         const card = checkbox.closest('.asset-card');
         const qtyWrapper = card.querySelector('.qty-wrapper');
         const qtyInput = qtyWrapper.querySelector('.asset-qty-input');
         const btnMinus = qtyWrapper.querySelector('.btn-minus');
         const btnPlus = qtyWrapper.querySelector('.btn-plus');
+
+        if (checkbox.checked) {
+            card.classList.add('active-selected');
+            qtyWrapper.style.maxHeight = "100px";
+            qtyWrapper.style.opacity = "1";
+            qtyInput.removeAttribute('disabled');
+            btnMinus.removeAttribute('disabled');
+            btnPlus.removeAttribute('disabled');
+            updateMinusButtonState(qtyInput, btnMinus);
+        }
 
         checkbox.addEventListener('change', function() {
             if (this.checked) {
@@ -346,9 +353,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 let serial_no = existingItem.serial_no || '';
                 let cpu_serial_no = existingItem.cpu_serial_no || '';
                 let monitor_serial_no = existingItem.monitor_serial_no || '';
-                let imei = existingItem.imei || '';
-                let sim_provider = existingItem.sim_provider || '';
-                let plan_days = existingItem.plan_days || '';
+                
+                let brand = existingItem.brand || '';
+                let model = existingItem.model || '';
+                let network = existingItem.network || '5G';
+                let ram_rom = existingItem.ram_rom || '';
+                let sim_number = existingItem.sim_number || '';
+                let imei_1 = existingItem.imei_1 || '';
+                let imei_2 = existingItem.imei_2 || '';
+                let charger = existingItem.charger || 'Yes';
 
                 let gridClass = (assetType === 'Mobile') ? 'col-xl-6 col-12' : 'col-md-6 col-12';
 
@@ -376,29 +389,45 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (assetType === 'Mobile') {
                     htmlContent += `
                         <div class="col-md-6 col-12">
-                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">IMEI Number <span class="text-danger">*</span></label>
-                            <input type="text" name="asset_details[${inventoryId}][${i}][imei]" class="form-control dynamic-field-control w-100" value="${imei}" placeholder="15-digit IMEI" autocomplete="off" spellcheck="false" required>
+                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">Mobile Brand / PC <span class="text-danger">*</span></label>
+                            <input type="text" name="asset_details[${inventoryId}][${i}][brand]" class="form-control dynamic-field-control w-100" value="${brand}" placeholder="e.g. Vivo" required>
                         </div>
                         <div class="col-md-6 col-12">
-                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">SIM Provider <span class="text-danger">*</span></label>
-                            <select name="asset_details[${inventoryId}][${i}][sim_provider]" class="form-select dynamic-field-control w-100" required>
-                                <option value="" disabled ${sim_provider === '' ? 'selected' : ''}>Carrier</option>
-                                <option value="Airtel" ${sim_provider === 'Airtel' ? 'selected' : ''}>Airtel</option>
-                                <option value="Jio" ${sim_provider === 'Jio' ? 'selected' : ''}>Jio</option>
-                                <option value="VI" ${sim_provider === 'VI' ? 'selected' : ''}>VI</option>
-                                <option value="BSNL" ${sim_provider === 'BSNL' ? 'selected' : ''}>BSNL</option>
+                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">Mobile Model <span class="text-danger">*</span></label>
+                            <input type="text" name="asset_details[${inventoryId}][${i}][model]" class="form-control dynamic-field-control w-100" value="${model}" placeholder="e.g. T4 Lite 5G" required>
+                        </div>
+                        <div class="col-md-4 col-12 mt-2">
+                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">Network <span class="text-danger">*</span></label>
+                            <select name="asset_details[${inventoryId}][${i}][network]" class="form-select dynamic-field-control w-100" required>
+                                <option value="5G" ${network === '5G' ? 'selected' : ''}>5G</option>
+                                <option value="4G" ${network === '4G' ? 'selected' : ''}>4G / LTE</option>
                             </select>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">Subscription Term <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <input type="number" name="asset_details[${inventoryId}][${i}][plan_days]" class="form-control dynamic-field-control rounded-start" value="${plan_days}" min="1" placeholder="e.g. 84" required>
-                                <span class="input-group-text small bg-light border text-muted" style="font-size: 0.8rem; border-color: #cbd5e1;">Days</span>
-                            </div>
+                        <div class="col-md-4 col-12 mt-2">
+                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">RAM / ROM <span class="text-danger">*</span></label>
+                            <input type="text" name="asset_details[${inventoryId}][${i}][ram_rom]" class="form-control dynamic-field-control w-100" value="${ram_rom}" placeholder="e.g. 8 / 256" required>
+                        </div>
+                        <div class="col-md-4 col-12 mt-2">
+                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">Charger Included? <span class="text-danger">*</span></label>
+                            <select name="asset_details[${inventoryId}][${i}][charger]" class="form-select dynamic-field-control w-100" required>
+                                <option value="Yes" ${charger === 'Yes' ? 'selected' : ''}>Yes</option>
+                                <option value="No" ${charger === 'No' ? 'selected' : ''}>No</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">SIM Number <span class="text-danger">*</span></label>
+                            <input type="text" name="asset_details[${inventoryId}][${i}][sim_number]" class="form-control dynamic-field-control w-100" value="${sim_number}" placeholder="Enter Contact SIM Number" required>
+                        </div>
+                        <div class="col-md-6 col-12 mt-2">
+                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">IMEI 1 <span class="text-danger">*</span></label>
+                            <input type="text" name="asset_details[${inventoryId}][${i}][imei_1]" class="form-control dynamic-field-control w-100" value="${imei_1}" placeholder="15-digit IMEI 1" required>
+                        </div>
+                        <div class="col-md-6 col-12 mt-2">
+                            <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">IMEI 2</label>
+                            <input type="text" name="asset_details[${inventoryId}][${i}][imei_2]" class="form-control dynamic-field-control w-100" value="${imei_2}" placeholder="15-digit IMEI 2 (Optional)">
                         </div>
                     `;
                 } else {
-                    // Universal Fallback Layer (Bag, Headphone, Charger, Tablet, etc.)
                     htmlContent += `
                         <div class="col-12">
                             <label class="form-label small fw-bold text-muted mb-1" style="font-size: 0.78rem;">Serial Number <span class="text-danger">*</span></label>

@@ -1,11 +1,17 @@
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('title')Edit Position @endsection
 
 @section('header')
   <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
-      <a href="{{ route('positions.index') }}" class="text-muted text-decoration-none small">
+      <a href="{{ route($routePrefix . 'positions.index') }}" class="text-muted text-decoration-none small">
         <i class="fas fa-arrow-left me-1"></i> Back to Positions
       </a>
       <h1 class="h3 mt-1 mb-0">Edit: {{ $position->title }}</h1>
@@ -21,7 +27,7 @@
         <h5 class="mb-0"><i class="fas fa-briefcase me-2 text-warning"></i>Position Details</h5>
       </div>
       <div class="card-body">
-        <form action="{{ route('positions.update', $position) }}" method="POST">
+        <form action="{{ route($routePrefix . 'positions.update', $position) }}" method="POST">
           @csrf @method('PUT')
           <div class="mb-3">
             <label class="form-label">Job Title <span class="text-danger">*</span></label>
@@ -66,7 +72,7 @@
             <button type="submit" class="btn btn-primary">
               <i class="fas fa-save me-1"></i>Save Changes
             </button>
-            <a href="{{ route('positions.index') }}" class="btn btn-light border">Cancel</a>
+            <a href="{{ route($routePrefix . 'positions.index') }}" class="btn btn-light border">Cancel</a>
           </div>
         </form>
       </div>

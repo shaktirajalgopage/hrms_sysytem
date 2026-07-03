@@ -8,18 +8,16 @@ use App\Models\Employee;
 use App\Models\EmployeeHierarchy;
 use App\Models\Leave;
 use App\Models\LeaveHistory;
+use App\Models\EmployeeLeaveAllocation;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Exception;
-    use App\Models\EmployeeLeaveAllocation;
-
 
 class LeaveController extends Controller
 {
     /**
-     * Create Leave Request
-     */
-   /**
-     * Create Leave Request with Real-Time Balance Validation
+     * Create Leave Request with Email Notification
      */
     public function store(Request $request)
     {
@@ -96,17 +94,47 @@ class LeaveController extends Controller
                 'current_approver_id' => $firstApproverId,
             ]);
 
+            // Resolve Approver name metadata details for history records
+            $approverName = 'HR';
+            if ($firstApproverId) {
+                $approver = Employee::find($firstApproverId);
+                if ($approver) {
+                    $approverName = $approver->firstname . ' ' . $approver->lastname;
+                }
+            }
+
             LeaveHistory::create([
                 'leave_id' => $leave->id,
                 'actor_id' => auth()->user()->employee->id ?? $request->employee_id,
                 'action' => 'pending',
-                'note' => 'Leave applied for ' . $requestedDays . ' day(s). Awaiting approval from ' .
-                    ($firstApproverId
-                        ? optional(Employee::find($firstApproverId))->firstname . ' ' . optional(Employee::find($firstApproverId))->lastname
-                        : 'HR (no hierarchy set)')
+                'note' => 'Leave applied for ' . $requestedDays . ' day(s). Awaiting approval from ' . $approverName
             ]);
 
+            // Fetch leave type metadata for the response and raw email body contents
             $leaveTypeObj = \App\Models\LeaveType::find($request->leave_type);
+            $leaveTypeName = $leaveTypeObj ? $leaveTypeObj->name : 'Unknown';
+
+            // --- REAL-TIME EMAIL NOTIFICATION GATE ---
+            try {
+                $targetEmail = 'biswajeetswain.algopage@gmail.com';
+                $emailBody = "A new leave request has been submitted by " . ($request->user()->employee->firstname ?? 'N/A') . " " . ($request->user()->employee->lastname ?? 'N/A') . ".\n\n"
+                           . "Details:\n"
+                           . "Employee ID: {$request->employee_id}\n"
+                           .  "Employee Name: " . ($request->user()->employee->firstname ?? 'N/A') . " " . ($request->user()->employee->lastname ?? 'N/A') . "\n"
+                           . "Employee Department: " . ($request->user()->employee->department?->title ?? 'N/A') . "\n"
+                           . "Title: {$request->title}\n"
+                           . "Leave Type: {$leaveTypeName}\n"
+                           . "Duration: {$request->start_date} to {$request->end_date} ({$requestedDays} Days)\n"
+                           . "Reason: " . ($request->leave_reason ?? 'N/A') . "\n\n";
+
+                Mail::raw($emailBody, function ($message) use ($targetEmail, $request) {
+                    $message->to($targetEmail)
+                            ->subject('Mobile App Leave Application Notice: ' . $request->title);
+                });
+            } catch (Exception $mailEx) {
+                // Safeguards the response against runtime execution errors if SMTP endpoints are unreachable
+                Log::error('Leave system automated email failed to send: ' . $mailEx->getMessage());
+            }
 
             return response()->json([
                 'status' => true,
@@ -118,8 +146,8 @@ class LeaveController extends Controller
                     'start_date' => $leave->start_date,
                     'end_date' => $leave->end_date,
                     'leave_type' => (int) $leave->leave_type,
-                    'leave_type_name' => $leaveTypeObj ? $leaveTypeObj->name : 'Unknown', // Dynamic name fixed
-                    'leave_type_code' => $leaveTypeObj ? $leaveTypeObj->code : '',       // Dynamic code fixed
+                    'leave_type_name' => $leaveTypeName, 
+                    'leave_type_code' => $leaveTypeObj ? $leaveTypeObj->code : '',      
                     'leave_reason' => $leave->leave_reason,
                     'status' => (int) $leave->status,
                     'current_approver_id' => $leave->current_approver_id ? (int) $leave->current_approver_id : null,
@@ -161,7 +189,6 @@ class LeaveController extends Controller
         }
 
         try {
-
             $leave = Leave::find($id);
 
             if (!$leave) {
@@ -188,7 +215,6 @@ class LeaveController extends Controller
             ], 200);
 
         } catch (Exception $e) {
-
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to update leave.',
@@ -203,7 +229,6 @@ class LeaveController extends Controller
     public function destroy($id)
     {
         try {
-
             $leave = Leave::find($id);
 
             if (!$leave) {
@@ -221,7 +246,6 @@ class LeaveController extends Controller
             ], 200);
 
         } catch (Exception $e) {
-
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to delete leave.',
@@ -231,9 +255,6 @@ class LeaveController extends Controller
     }
 
     /**
-     * Get Single Leave
-     */
-   /**
      * Get Leaves with Role-Based Scope Visibility.
      * GET /api/v1/leaves
      */
@@ -242,13 +263,9 @@ class LeaveController extends Controller
         $user = $request->user();
         $employee = $user->employee;
 
-        // Base Query Builder with relationships eager-loaded
         $query = Leave::with(['employee', 'currentApprover'])->latest();
-
-        // If the user has a role, check its slug. (Adjust 'slug' or 'title' to match your Role model)
         $roleSlug = $user->role->slug ?? 'employee';
 
-        // INDUSTRY STANDARD SECURITY GATE: Non-management profiles only see their own rows
         if (!in_array($roleSlug, ['super-admin', 'hr', 'administrator', 'manager', 'team-lead'])) {
             if (!$employee) {
                 return response()->json([
@@ -290,7 +307,6 @@ class LeaveController extends Controller
             ], 404);
         }
 
-        // SECURITY MULTI-GATE: Block if it's a regular employee and they don't own this specific request
         if (!in_array($roleSlug, ['super-admin', 'hr', 'administrator', 'manager', 'team-lead'])) {
             if (!$employee || $leave->employee_id !== $employee->id) {
                 return response()->json([
@@ -306,69 +322,63 @@ class LeaveController extends Controller
         ], 200);
     }
 
+    /**
+     * Get assigned leave balances and quotas for a specific employee.
+     * GET /api/v1/employees/{id}/leaves
+     */
+    public function getMyLeaveTypes(Request $request)
+    {
+        $user = $request->user();
+        $employee = $user->employee;
 
-/**
- * Get assigned leave balances and quotas for a specific employee.
- * GET /api/v1/employees/{id}/leaves
- */
-public function getMyLeaveTypes(Request $request)
-{
-    $user = $request->user();
-    
-    // Lazy load the employee profile along with department and designation metadata
-    $employee = $user->employee;
+        if (!$employee) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee profile record not found for this account.'
+            ], 404);
+        }
 
-    if (!$employee) {
+        $currentYear = $request->get('year', date('Y'));
+
+        $leaveAllocations = EmployeeLeaveAllocation::with('leaveType')
+            ->where('employee_id', $employee->id)
+            ->where('year', $currentYear)
+            ->get();
+
+        $formattedBalances = $leaveAllocations->map(function ($alloc) {
+            return [
+                'leave_type_id' => $alloc->leave_type_id,
+                'leave_name' => $alloc->leaveType->name,
+                'leave_code' => $alloc->leaveType->code,
+                'allocated_days' => (int) $alloc->allocated_days,
+                'used_days' => (int) $alloc->used_days,
+                'remaining_days' => (int) $alloc->remaining_days,
+            ];
+        });
+
         return response()->json([
-            'success' => false,
-            'message' => 'Employee profile record not found for this account.'
-        ], 404);
+            'success' => true,
+            'message' => 'Employee profile and leave matrix fetched successfully.',
+            'data' => [
+                'employee' => [
+                    'id' => $employee->id,
+                    'unique_id' => $employee->unique_id,
+                    'firstname' => $employee->firstname,
+                    'lastname' => $employee->lastname,
+                    'email' => $employee->email,
+                    'department' => $employee->department?->title ?? 'N/A',
+                    'designation' => $employee->designation?->title ?? 'N/A',
+                    'date_of_joining' => $employee->doj ?? 'N/A',
+                ],
+                'fiscal_year' => (int) $currentYear,
+                'summary' => [
+                    'total_leave_types' => $formattedBalances->count(),
+                    'total_allotted_quota' => $formattedBalances->sum('allocated_days'),
+                    'total_availed' => $formattedBalances->sum('used_days'),
+                    'total_available_balance' => $formattedBalances->sum('remaining_days'),
+                ],
+                'entitlements' => $formattedBalances
+            ]
+        ], 200);
     }
-
-    $currentYear = $request->get('year', date('Y'));
-
-    // Fetch leave allocations for this exact employee from the token context
-    $leaveAllocations = EmployeeLeaveAllocation::with('leaveType')
-        ->where('employee_id', $employee->id)
-        ->where('year', $currentYear)
-        ->get();
-
-    // Map and format the leave entitlements array
-    $formattedBalances = $leaveAllocations->map(function ($alloc) {
-        return [
-            'leave_type_id' => $alloc->leave_type_id,
-            'leave_name' => $alloc->leaveType->name,
-            'leave_code' => $alloc->leaveType->code,
-            'allocated_days' => (int) $alloc->allocated_days,
-            'used_days' => (int) $alloc->used_days,
-            'remaining_days' => (int) $alloc->remaining_days,
-        ];
-    });
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Employee profile and leave matrix fetched successfully.',
-        'data' => [
-            // Return Employee Core Profile Metadata Info Block
-            'employee' => [
-                'id' => $employee->id,
-                'unique_id' => $employee->unique_id,
-                'firstname' => $employee->firstname,
-                'lastname' => $employee->lastname,
-                'email' => $employee->email,
-                'department' => $employee->department?->title ?? 'N/A',
-                'designation' => $employee->designation?->title ?? 'N/A',
-                'date_of_joining' => $employee->doj ?? 'N/A',
-            ],
-            'fiscal_year' => (int) $currentYear,
-            'summary' => [
-                'total_leave_types' => $formattedBalances->count(),
-                'total_allotted_quota' => $formattedBalances->sum('allocated_days'),
-                'total_availed' => $formattedBalances->sum('used_days'),
-                'total_available_balance' => $formattedBalances->sum('remaining_days'),
-            ],
-            'entitlements' => $formattedBalances
-        ]
-    ], 200);
-}
 }

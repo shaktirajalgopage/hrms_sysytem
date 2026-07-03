@@ -27,7 +27,7 @@ class UserAppNotificastion extends Model
         'status',
         'created_by',
     ];
-
+   
     protected $casts = [
         'target_roles'        => 'array',
         'target_employee_ids' => 'array',

@@ -1,5 +1,11 @@
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('content')
 <div class="container-fluid px-4 py-4" style="background-color: #f8fafc; min-height: 100vh;">
     
@@ -10,7 +16,7 @@
         </div>
         
         <div class="bg-white p-2 rounded border shadow-sm" style="border-radius: 8px; border-color: #e2e8f0 !important;">
-            <form action="{{ route('leave-allocation.index') }}" method="GET" id="yearPickerForm" class="form-inline m-0">
+            <form action="{{ route($routePrefix . 'leave-allocation.index') }}" method="GET" id="yearPickerForm" class="form-inline m-0">
                 <i class="far fa-calendar-alt text-primary mr-2 ml-1" style="font-size: 0.9rem;"></i>
                 <label for="year" class="mr-2 font-weight-bold text-secondary text-uppercase tracking-wider small" style="font-size: 0.7rem; letter-spacing: 0.5px;">Calendar Year:</label>
                 <select name="year" id="year" class="form-control form-control-sm border-0 bg-light text-primary font-weight-bold px-3" style="font-size: 0.85rem; height: 32px; border-radius: 6px; cursor: pointer;" onchange="document.getElementById('yearPickerForm').submit();">
@@ -63,7 +69,7 @@
                                             </span>
                                         </td>
                                         <td class="px-4 py-3 align-middle text-center">
-                                            <form action="{{ route('leave-allocation.destroy', $allocation->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to drop this allocation rule?');" class="m-0">
+                                            <form action="{{ route($routePrefix . 'leave-allocation.destroy', $allocation->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to drop this allocation rule?');" class="m-0">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="btn btn-sm btn-outline-danger border rounded px-3 py-1" style="font-size: 0.78rem; background: #fff; transition: all 0.2s;">
                                                     <i class="fas fa-trash-alt mr-1 small"></i> Reset
@@ -96,7 +102,7 @@
                     <h6 class="font-weight-bold m-0 text-dark" style="font-size: 0.88rem; font-weight: 700;">Allocate Quota Days</h6>
                 </div>
                 <div class="card-body px-4 py-4">
-                    <form action="{{ route('leave-allocation.store') }}" method="POST">
+                    <form action="{{ route($routePrefix . 'leave-allocation.store') }}" method="POST">
                         @csrf
                         <input type="hidden" name="year" value="{{ $selectedYear }}">
                         
@@ -133,7 +139,7 @@
                     <h6 class="font-weight-bold m-0 text-dark" style="font-size: 0.88rem; font-weight: 700;">Create New Leave Type Base</h6>
                 </div>
                 <div class="card-body px-4 py-4" style="background-color: #fafafa; border-radius: 0 0 10px 10px;">
-                    <form action="{{ route('leave-types.store') }}" method="POST">
+                    <form action="{{ route($routePrefix . 'leave-types.store') }}" method="POST">
                         @csrf
                         <div class="row">
                             <div class="col-7 form-group mb-0 pr-1">

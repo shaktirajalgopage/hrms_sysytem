@@ -1,10 +1,16 @@
 @extends('layouts.admin') {{-- Change to match your master panel layout structure --}}
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('content')
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="h4 text-dark font-weight-bold">Salary Slips</h2>
-        <a href="{{ route('salary-slip.create') }}" class="btn btn-primary px-4 shadow-sm">
+        <a href="{{ route($routePrefix . 'salary-slip.create') }}" class="btn btn-primary px-4 shadow-sm">
             <i class="fas fa-plus mr-2"></i>Create Salary Slip
         </a>
     </div>
@@ -55,10 +61,10 @@
                                 </td>
                                 <td class="px-4 py-3 align-middle text-center">
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('salary-slip.show', $slip->id) }}" class="btn btn-sm btn-outline-info" title="View"><i class="fas fa-eye"></i></a>
-                                        <a href="{{ route('salary-slip.edit', $slip->id) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></a>
-                                        <a href="{{ route('salary-slip.pdf', $slip->id) }}" target="_blank" class="btn btn-sm btn-outline-success" title="Download PDF"><i class="fas fa-file-pdf"></i></a>
-                                        <form action="{{ route('salary-slip.destroy', $slip->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this salary slip?');">
+                                        <a href="{{ route($routePrefix . 'salary-slip.show', $slip->id) }}" class="btn btn-sm btn-outline-info" title="View"><i class="fas fa-eye"></i></a>
+                                        <a href="{{ route($routePrefix . 'salary-slip.edit', $slip->id) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></a>
+                                        <a href="{{ route($routePrefix . 'salary-slip.pdf', $slip->id) }}" target="_blank" class="btn btn-sm btn-outline-success" title="Download PDF"><i class="fas fa-file-pdf"></i></a>
+                                        <form action="{{ route($routePrefix . 'salary-slip.destroy', $slip->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this salary slip?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>

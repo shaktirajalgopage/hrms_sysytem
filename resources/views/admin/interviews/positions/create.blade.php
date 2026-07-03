@@ -1,12 +1,18 @@
 {{-- resources/views/interviews/positions/create.blade.php --}}
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('title')Create Position @endsection
 
 @section('header')
   <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
-      <a href="{{ route('positions.index') }}" class="text-muted text-decoration-none small">
+      <a href="{{ route($routePrefix . 'positions.index') }}" class="text-muted text-decoration-none small">
         <i class="fas fa-arrow-left me-1"></i> Back to Positions
       </a>
       <h1 class="h3 mt-1 mb-0">Create Position</h1>
@@ -22,7 +28,7 @@
         <h5 class="mb-0"><i class="fas fa-briefcase me-2 text-warning"></i>Position Details</h5>
       </div>
       <div class="card-body">
-        <form action="{{ route('positions.store') }}" method="POST">
+        <form action="{{ route($routePrefix . 'positions.store') }}" method="POST">
           @csrf
           <div class="mb-3">
             <label class="form-label">Job Title <span class="text-danger">*</span></label>
@@ -60,7 +66,7 @@
             <button type="submit" class="btn btn-primary">
               <i class="fas fa-plus me-1"></i>Create Position
             </button>
-            <a href="{{ route('positions.index') }}" class="btn btn-light border">Cancel</a>
+            <a href="{{ route($routePrefix . 'positions.index') }}" class="btn btn-light border">Cancel</a>
           </div>
         </form>
       </div>

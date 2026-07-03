@@ -9,6 +9,14 @@ use Illuminate\Support\Facades\Auth;
 
 class JobPositionController extends Controller
 {
+
+  private function routePrefix()
+{
+    return auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+}
+
     public function index()
     {
         $positions = JobPosition::withCount('applications')
@@ -45,7 +53,7 @@ class JobPositionController extends Controller
             'created_by' => Auth::id(),
         ]);
 
-        return redirect()->route('positions.index')
+        return redirect()->route($this->routePrefix() . 'positions.index')
             ->with('success', 'Job position created.');
     }
 
@@ -71,7 +79,7 @@ class JobPositionController extends Controller
 
         $position->update($request->only(['title', 'department', 'location', 'type', 'openings', 'is_active']));
 
-        return redirect()->route('positions.index')
+        return redirect()->route($this->routePrefix() . 'positions.index')
             ->with('success', 'Position updated.');
     }
 

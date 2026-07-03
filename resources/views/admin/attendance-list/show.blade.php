@@ -1,5 +1,11 @@
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('title')
     {{ __('Attendance Detail') }}
 @endsection
@@ -7,7 +13,7 @@
 @section('header')
   <div class="d-flex align-items-center justify-content-between mb-4">
     <div class="d-flex align-items-center gap-3">
-      <a href="{{ route('attendance-list.index') }}" class="btn btn-outline-secondary btn-sm">
+      <a href="{{ route($routePrefix . 'attendance-list.index') }}" class="btn btn-outline-secondary btn-sm">
         <i class="fas fa-arrow-left"></i>
       </a>
       <h1 class="h3 mb-0">{{ __('Attendance Detail') }}</h1>

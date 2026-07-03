@@ -1,5 +1,11 @@
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('title')
     {{ __('Add Candidate') }}
 @endsection
@@ -7,7 +13,7 @@
 @section('header')
   <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
-      <a href="{{ route('positions.index') }}" class="text-muted text-decoration-none small">
+      <a href="{{ route("{$routePrefix}positions.index") }}" class="text-muted text-decoration-none small">
         <i class="fas fa-arrow-left me-1"></i> Back to Pipeline
       </a>
       <h1 class="h3 mt-1 mb-0">{{ __('Add Candidate') }}</h1>
@@ -16,7 +22,7 @@
 @endsection
 
 @section('content')
-<form action="{{ route('applications.store') }}" method="POST" enctype="multipart/form-data">
+<form action="{{ route("{$routePrefix}applications.store") }}" method="POST" enctype="multipart/form-data">
 @csrf
 
 <div class="row g-4">
@@ -150,7 +156,7 @@
       <button type="submit" class="btn btn-primary btn-lg">
         <i class="fas fa-check me-2"></i>Submit Application
       </button>
-      <a href="{{ route('positions.index') }}" class="btn btn-light border">Cancel</a>
+      <a href="{{ route("{$routePrefix}positions.index") }}" class="btn btn-light border">Cancel</a>
     </div>
 
   </div>

@@ -1,5 +1,11 @@
 @extends('layouts.admin')
 
+@php
+    $routePrefix = auth()->user()->role->slug === 'hr-manager'
+        ? 'hr.'
+        : '';
+@endphp
+
 @section('title')
     {{ __('Manage Holidays') }}
 @endsection
@@ -7,7 +13,7 @@
 @section('header')
   <div class="d-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-3">Manage Holidays</h1>
-    <a href="{{ route('holiday.create') }}" class="btn btn-primary">
+    <a href="{{ route($routePrefix . 'holiday.create') }}" class="btn btn-primary">
       <i class="fas fa-plus"></i>
       <span class="ps-1">{{ __('Add New') }}</span>
     </a>
@@ -54,11 +60,11 @@
                   @endif
                 </td>
                 <td class="d-flex align-items-center">
-                  <a href="{{ route('holiday.edit', $holiday->id) }}" class="btn btn-info btn-sm">
+                  <a href="{{ route($routePrefix . 'holiday.edit', $holiday->id) }}" class="btn btn-info btn-sm">
                     <i class="fas fa-edit"></i>
                   </a>
                 
-                  <form action="{{ route('holiday.destroy', $holiday->id) }}" method="post">
+                  <form action="{{ route($routePrefix . 'holiday.destroy', $holiday->id) }}" method="post">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?')">
