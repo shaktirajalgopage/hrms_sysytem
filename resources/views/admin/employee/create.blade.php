@@ -48,6 +48,10 @@
                                         <label for="dob">{{ __('Date of Birth') }}</label>
                                         <input type="date" name="dob" class="form-control" id="dob" />
                                     </div>
+                                    <div class="col-6">
+                                        <label for="dob">{{ __('Date of Joining') }}</label>
+                                        <input type="date" name="doj" class="form-control" id="doj" />
+                                    </div>
                                     <div class="col-12">
                                         <label for="address">{{ __('Address') }}</label>
                                         <textarea name="address" class="form-control" id="address" cols="30" rows="6"

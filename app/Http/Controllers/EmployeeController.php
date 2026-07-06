@@ -112,6 +112,8 @@ class EmployeeController extends Controller
     {
         $employee = Employee::with(['salary', 'hierarchy'])->findOrFail($id);
 
+        // dd($employee);
+
         $departments  = Department::all();
         $designations = Designation::all();
         $schedules    = Schedule::all();

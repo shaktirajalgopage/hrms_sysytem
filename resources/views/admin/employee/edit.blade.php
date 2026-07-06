@@ -86,10 +86,11 @@
                                     <input type="date" name="dob" class="form-control" id="dob"
                                         value="{{ $employee->dob }}" />
                                 </div>
+                               
                                 <div class="col-6">
                                     <label for="doj">{{ __('Date of Joining') }}</label>
                                     <input type="date" name="doj" class="form-control" id="doj"
-                                        value="{{ $employee->doj }}" />
+                                       value="{{ date('Y-m-d', strtotime($employee->doj)) }}">
                                 </div>
                                 <div class="col-12">
                                     <label for="address">{{ __('Address') }}</label>
