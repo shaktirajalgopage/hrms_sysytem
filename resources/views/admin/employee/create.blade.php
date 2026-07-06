@@ -407,6 +407,26 @@
                     </div>
                 </div>
 
+                <div class="col-6">
+                    <label class="d-block">{{ __('Employee Status') }}</label>
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="emp_status" id="status_active"
+                            value="active" checked>
+                        <label class="form-check-label" for="status_active">
+                            {{ __('Active') }}
+                        </label>
+                    </div>
+
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="emp_status" id="status_inactive"
+                            value="inactive">
+                        <label class="form-check-label" for="status_inactive">
+                            {{ __('Inactive') }}
+                        </label>
+                    </div>
+                </div>
+
 
 
                 <div class="row mt-4">
@@ -481,7 +501,7 @@
                 });
         }
 
-        
+
 
         // Trigger on change
         deptSelect.addEventListener('change', function() {
@@ -492,7 +512,5 @@
         if (deptSelect.value) {
             loadDeptEmployees(deptSelect.value);
         }
-
-        
     </script>
 @endsection

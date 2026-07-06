@@ -112,7 +112,7 @@ class EmployeeController extends Controller
     {
         $employee = Employee::with(['salary', 'hierarchy'])->findOrFail($id);
 
-        // dd($employee);
+       dd($employee);
 
         $departments  = Department::all();
         $designations = Designation::all();
@@ -126,6 +126,7 @@ class EmployeeController extends Controller
     // ─────────────────────────────────────────────
     public function update(UpdateEmployeeRequest $request, Employee $employee)
     {
+        // dd($request->all());
         $salaryFields = [
             'basic', 'house_rent', 'medical', 'transport',
             'phone_bill', 'internet_bill', 'special',
@@ -540,6 +541,22 @@ class EmployeeController extends Controller
         'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         'Cache-Control'       => 'max-age=0',
+    ]);
+}
+public function toggleStatus(Request $request, Employee $employee)
+{
+    $request->validate([
+        'emp_status' => 'required|in:active,inactive',
+    ]);
+
+    $employee->update([
+        'emp_status' => $request->emp_status,
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'status' => ucfirst($employee->emp_status),
+        'message' => 'Employee status updated successfully.'
     ]);
 }
 }

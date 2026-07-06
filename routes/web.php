@@ -857,5 +857,8 @@ Route::get('admin/employee/export', [EmployeeController::class, 'export'])->name
 // hr-manager
 Route::get('hr/employee/export', [EmployeeController::class, 'export'])->name('hr.employee.export');
 
+
+
+
 require __DIR__.'/auth.php';
 

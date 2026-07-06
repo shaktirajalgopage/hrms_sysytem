@@ -48,7 +48,7 @@ class Employee extends Model
         'personal_email',
         'emergency_phone',
         'doj',
-        'blood_group',
+        'blood_group'
         
     ];
 // Define relationships
