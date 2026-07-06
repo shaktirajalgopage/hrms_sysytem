@@ -20,6 +20,8 @@
   ============================================================ */
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&display=swap');
 
+  html, body{ overflow-x:hidden; }
+
   :root{
     --stage-1:#150f24;
     --stage-2:#1f1638;
@@ -34,6 +36,11 @@
 
   .auth3d-stage{
     position:relative;
+    width:100vw;
+    left:50%;
+    right:50%;
+    margin-left:-50vw;
+    margin-right:-50vw;
     min-height:100vh;
     display:flex;
     align-items:center;
