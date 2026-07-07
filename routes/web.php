@@ -559,21 +559,35 @@ Route::middleware('hr')->prefix('hr-manager')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('hr.dashboard');
 
     Route::prefix('department')->group(function () {
-        Route::get('/', [DepartmentController::class, 'index'])->name('hr.department.index');
-        Route::get('/create', [DepartmentController::class, 'create'])->name('hr.department.create');
-        Route::post('/', [DepartmentController::class, 'create'])->name('hr.department.store');
-        Route::get('/{id}/edit', [DepartmentController::class, 'edit'])->name('hr.department.edit');
-        Route::put('/{id}', [DepartmentController::class, 'update'])->name('hr.department.update');
-        Route::delete('/{id}', [DepartmentController::class, 'destroy'])->name('hr.department.destroy');
+
+        Route::get('/', [DepartmentController::class, 'index'])
+            ->name('hr.department.index');
+
+        Route::get('/create', [DepartmentController::class, 'create'])
+            ->name('hr.department.create');
+
+        Route::post('/', [DepartmentController::class, 'store'])
+            ->name('hr.department.store');
+
+        Route::get('/{department}/edit', [DepartmentController::class, 'edit'])
+            ->name('hr.department.edit');
+
+        Route::put('/{department}', [DepartmentController::class, 'update'])
+            ->name('hr.department.update');
+
+        Route::delete('/{department}', [DepartmentController::class, 'destroy'])
+            ->name('hr.department.destroy');
     });
 
     Route::prefix('designation')->group(function () {
         Route::get('/', [DesignationController::class, 'index'])->name('hr.designation.index');
         Route::get('/create', [DesignationController::class, 'create'])->name('hr.designation.create');
-        Route::post('/', [DesignationController::class, 'create'])->name('hr.designation.store');
+        Route::post('/', [DesignationController::class, 'store'])->name('hr.designation.store');
         Route::get('/{id}/edit', [DesignationController::class, 'edit'])->name('hr.designation.edit');
-        Route::put('/{id}', [DesignationController::class, 'update'])->name('hr.designation.update');
-        Route::delete('/{id}', [DesignationController::class, 'destroy'])->name('hr.designation.destroy');
+        Route::put('/{designation}', [DesignationController::class, 'update'])
+            ->name('hr.designation.update');
+        Route::delete('/{designation}', [DesignationController::class, 'destroy'])
+            ->name('hr.designation.destroy');
     });
 
     Route::prefix('employee')->group(function () {
@@ -585,8 +599,9 @@ Route::middleware('hr')->prefix('hr-manager')->group(function () {
         Route::get('/{id}/show', [EmployeeController::class, 'show'])->name('hr.employee.show');
         Route::post('/', [EmployeeController::class, 'create'])->name('hr.employee.store');
         Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('hr.employee.edit');
-        Route::put('/{id}', [EmployeeController::class, 'update'])->name('hr.employee.update');
-        Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('hr.employee.destroy');
+        Route::put('/{employee}', [EmployeeController::class, 'update'])
+            ->name('hr.employee.update');
+        Route::delete('/{employee}', [EmployeeController::class, 'destroy'])->name('hr.employee.destroy');
         // Route::get('notifications/read/{id}',[NotificationController::class,'read'])->name('hr.notifications.read');
 
         // Route::get('import',[EmployeeController::class, 'bulkImportForm'])->name('hr.import.form');
@@ -857,5 +872,4 @@ Route::get('admin/employee/export', [EmployeeController::class, 'export'])->name
 // hr-manager
 Route::get('hr/employee/export', [EmployeeController::class, 'export'])->name('hr.employee.export');
 
-require __DIR__.'/auth.php';
-
+require __DIR__ . '/auth.php';

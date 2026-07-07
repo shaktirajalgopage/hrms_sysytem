@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\HolidayController;
 use App\Http\Controllers\Api\SalarySlipController;
 use App\Http\Controllers\Api\RecentActivityController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\AttendanceLogsController;
+use App\Http\Controllers\Api\AllLeavesController;
 
 
 /*
@@ -46,6 +48,14 @@ Route::middleware('auth:sanctum')->group( function () {
     Route::get('/my-leaveType', [LeaveController::class, 'getMyLeaveTypes']);
 
     Route::get('/holidays', [HolidayController::class, 'index']);
+
+    Route::get('/admin/leaves', [AllLeavesController::class, 'index']);
+    Route::get('/admin/leaves/{id}', [AllLeavesController::class, 'show']);
+
+    Route::get('/attendance-logs', [AttendanceLogsController::class, 'index']);
+    Route::get('/attendance-logs/{id}', [AttendanceLogsController::class, 'show']);
+    Route::get('/attendance-export', [AttendanceLogsController::class, 'export'])
+    ->name('attendance.export');
 
     
     // 2. Mid list data array endpoints
