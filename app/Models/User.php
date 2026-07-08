@@ -10,6 +10,9 @@ use Illuminate\Notifications\Notification;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\Task;
+use App\Models\Ticket;
+use Illuminate\Database\Eloquent\Relations\HasMany; 
 
 
 class User extends Authenticatable
@@ -50,6 +53,29 @@ class User extends Authenticatable
     }
     public function employee(): HasOne {
     return $this->hasOne(Employee::class, 'user_id');
+}
+
+public function assignedTasks(): HasMany
+{
+    return $this->hasMany(Task::class, 'assigned_to');
+}
+
+// --- Tasks this user created ---
+public function createdTasks(): HasMany
+{
+    return $this->hasMany(Task::class, 'created_by');
+}
+
+// --- Tickets raised by this user ---
+public function raisedTickets(): HasMany
+{
+    return $this->hasMany(Ticket::class, 'raised_by');
+}
+
+// --- Tickets assigned to this user ---
+public function assignedTickets(): HasMany
+{
+    return $this->hasMany(Ticket::class, 'assigned_to');
 }
 // public function notifications(): BelongsTo {
 //         return $this->belongsTo(Notification::class);
