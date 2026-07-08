@@ -259,6 +259,46 @@
                 </li>
             @endif
 
+
+{{-- ============================================================ --}}
+{{-- TASK MANAGEMENT --}}
+{{-- ============================================================ --}}
+@if (Auth::check())
+    <li class="nav-item nav-group">
+        <a class="nav-link nav-link--toggle" href="#" role="button" data-bs-toggle="collapse"
+            data-bs-target="#navTaskManagement" aria-expanded="false" aria-controls="navTaskManagement">
+            <span class="nav-link-icon"><i class="fa-solid fa-diagram-project"></i></span>
+            <span class="nav-link-text">{{ __('Task Management') }}</span>
+            <span class="nav-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+        </a>
+        <div class="collapse nav-submenu" id="navTaskManagement" data-bs-parent="#sidebarAccordion">
+            <ul class="nav-sublist">
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('projects.*') ? 'active' : '' }}"
+                        href="{{ route('projects.index') }}">
+                        <span class="nav-link-icon"><i class="fa-solid fa-diagram-project"></i></span>
+                        <span class="nav-link-text">{{ __('Projects') }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('tickets.*') ? 'active' : '' }}"
+                        href="{{ route('tickets.index') }}">
+                        <span class="nav-link-icon"><i class="fa-solid fa-ticket"></i></span>
+                        <span class="nav-link-text">{{ __('Tickets') }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('reports.index') ? 'active' : '' }}"
+                        href="{{ route('reports.index') }}">
+                        <span class="nav-link-icon"><i class="fa-solid fa-chart-line"></i></span>
+                        <span class="nav-link-text">{{ __('Reports') }}</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </li>
+@endif
+
             {{-- ============================================================ --}}
             {{-- ATTENDANCE MANAGEMENT --}}
             {{-- ============================================================ --}}

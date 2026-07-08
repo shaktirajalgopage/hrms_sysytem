@@ -31,11 +31,56 @@ use App\Http\Controllers\SalarySlipController;
 use App\Http\Controllers\LeaveTypeController;
 use App\Http\Controllers\LeaveAllocationController;
 use App\Http\Controllers\EmployeeLeaveAllocationController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TicketController;
+
 
 
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+// ─────────────────────────────────────────────
+// PROJECT / TASK / TICKET MANAGEMENT
+// Shared across all authenticated roles
+// ─────────────────────────────────────────────
+Route::middleware('auth')->group(function () {
+
+    Route::prefix('projects')->name('projects.')->group(function () {
+        Route::get('/', [ProjectController::class, 'index'])->name('index');
+        Route::get('/create', [ProjectController::class, 'create'])->name('create');
+        Route::post('/', [ProjectController::class, 'store'])->name('store');
+        Route::get('/{project}', [ProjectController::class, 'show'])->name('show');
+        Route::get('/{project}/edit', [ProjectController::class, 'edit'])->name('edit');
+        Route::put('/{project}', [ProjectController::class, 'update'])->name('update');
+        Route::delete('/{project}', [ProjectController::class, 'destroy'])->name('destroy');
+
+        // Tasks nested under a project
+        Route::post('/{project}/tasks', [TaskController::class, 'store'])->name('tasks.store');
+    });
+
+    Route::prefix('tasks')->name('tasks.')->group(function () {
+        Route::put('/{task}', [TaskController::class, 'update'])->name('update');
+        Route::patch('/{task}/status', [TaskController::class, 'updateStatus'])->name('status');
+        Route::patch('/{task}/progress', [TaskController::class, 'updateProgress'])->name('progress');
+        Route::post('/{task}/comments', [TaskController::class, 'storeComment'])->name('comments.store');
+        Route::delete('/{task}', [TaskController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('tickets')->name('tickets.')->group(function () {
+        Route::get('/', [TicketController::class, 'index'])->name('index');
+        Route::post('/', [TicketController::class, 'store'])->name('store');
+        Route::get('/{ticket}', [TicketController::class, 'show'])->name('show');
+        Route::post('/{ticket}/reply', [TicketController::class, 'reply'])->name('reply');
+        Route::patch('/{ticket}/status', [TicketController::class, 'updateStatus'])->name('status');
+        Route::patch('/{ticket}/assign', [TicketController::class, 'assign'])->name('assign');
+        Route::delete('/{ticket}', [TicketController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::get('/reports/projects', [ReportController::class, 'index'])->name('reports.index');
 });
 
 
@@ -57,7 +102,6 @@ Route::middleware('superadmin')->prefix('super')->group(function () {
     Route::resource('attendance', AttendanceController::class);
     Route::resource('schedule', ScheduleController::class);
 
-    // Leaves (resource covers index/create/store/edit/update/destroy)
     // Leave Management
     Route::prefix('leaves')->group(function () {
 
@@ -579,6 +623,8 @@ Route::middleware('hr')->prefix('hr-manager')->group(function () {
             ->name('hr.department.destroy');
     });
 
+    
+
     Route::prefix('designation')->group(function () {
         Route::get('/', [DesignationController::class, 'index'])->name('hr.designation.index');
         Route::get('/create', [DesignationController::class, 'create'])->name('hr.designation.create');
@@ -781,6 +827,17 @@ Route::middleware('hr')->prefix('hr-manager')->group(function () {
     });
 
 
+    // Bulk Import
+    Route::get('/bulk-import', [EmployeeAssetController::class, 'bulkView'])
+        ->name('employee-assets.bulk-view');
+
+    Route::get('/download-template', [EmployeeAssetController::class, 'downloadTemplate'])
+        ->name('employee-assets.download-template');
+
+    Route::post('/bulk-store', [EmployeeAssetController::class, 'bulkStore'])
+        ->name('employee-assets.bulk-store');
+
+
 
     Route::get('attendance-list', [AdminAttendanceController::class, 'index'])->name('hr.attendance-list.index');
     Route::get('attendance-list/{attendance_log}',  [AdminAttendanceController::class, 'show'])->name('hr.attendance-list.show');
@@ -873,3 +930,4 @@ Route::get('admin/employee/export', [EmployeeController::class, 'export'])->name
 Route::get('hr/employee/export', [EmployeeController::class, 'export'])->name('hr.employee.export');
 
 require __DIR__ . '/auth.php';
+
