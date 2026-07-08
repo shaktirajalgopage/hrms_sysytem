@@ -21,7 +21,7 @@
       <table class="table data-table">
         <thead>
           <tr>
-            <th scope="col">SL</th>
+            <th scope="col">SL</th> 
             <th scope="col">Designation Title</th>
             <th scope="col">Status</th>
             <th scope="col">Date Created</th>

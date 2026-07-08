@@ -7,7 +7,7 @@
                         class="sidebar-logo">
 
                 </span>
-                <span class="sidebar-brand-text">ALGOPAGE</span>
+                <span class="sidebar-brand-text">ALGOPAGE.</span>
             </a>
 
             <button class="sidebar-close-btn d-lg-none" id="sidebarMobileClose" type="button" aria-label="Close menu">

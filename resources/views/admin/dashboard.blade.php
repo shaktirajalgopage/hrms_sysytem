@@ -22,7 +22,6 @@
                             <i class="fa-solid fa-clock"></i>
                         </div>
                     </div>
-                    <a href="{{ route('schedule.index') }}" class="stretched-link stat-link"></a>
                 </div>
             </div>
         </div>
@@ -39,7 +38,6 @@
                             <i class="fa-solid fa-users-gear"></i>
                         </div>
                     </div>
-                    <a href="{{ route('department.index') }}" class="stretched-link stat-link"></a>
                 </div>
             </div>
         </div>
@@ -56,7 +54,6 @@
                             <i class="fa-solid fa-users-viewfinder"></i>
                         </div>
                     </div>
-                    <a href="{{ route('employee.index') }}" class="stretched-link stat-link"></a>
                 </div>
             </div>
         </div>
@@ -73,7 +70,6 @@
                             <i class="fas fa-user"></i>
                         </div>
                     </div>
-                    <a href="{{ route('user.index') }}" class="stretched-link stat-link"></a>
                 </div>
             </div>
         </div>

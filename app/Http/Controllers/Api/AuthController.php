@@ -33,7 +33,11 @@ class AuthController extends Controller
             "password" => "required"
         ]);
 
-        $user = User::where("email", $request->email)->first();
+        // MODIFIED: Added leftJoin to pull the role title dynamically
+        $user = User::select('users.*', 'roles.title as role_name')
+            ->leftJoin('roles', 'roles.id', '=', 'users.role_id')
+            ->where("email", $request->email)
+            ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
 
@@ -101,7 +105,7 @@ class AuthController extends Controller
      * Get authenticated user profile along with corporate hierarchy names.
      * GET /api/v1/profile
      */
-   /**
+    /**
      * Get authenticated user profile with full avatar URLs and corporate hierarchies.
      * GET /api/v1/profile
      */
@@ -114,11 +118,11 @@ class AuthController extends Controller
             $storageUrl = url('storage') . '/';
 
             $user = User::leftJoin(
-                    'employees',
-                    'employees.user_id',
-                    '=',
-                    'users.id'
-                )
+                'employees',
+                'employees.user_id',
+                '=',
+                'users.id'
+            )
                 ->leftJoin(
                     'departments',
                     'departments.id',
@@ -171,7 +175,7 @@ class AuthController extends Controller
                     'users.name',
                     'users.phone',
                     'employees.*',
-                    
+
                     // FIXED: Overwrites the raw employee avatar field string with an industry standard absolute download URL asset string
                     \DB::raw("CASE 
                         WHEN employees.avatar IS NOT NULL THEN CONCAT('{$storageUrl}', employees.avatar)
@@ -181,7 +185,7 @@ class AuthController extends Controller
                     'departments.title as department_name',
                     'designations.title as designation_name',
                     'schedules.title as schedule_name',
-                    
+
                     \DB::raw("CONCAT(tl.firstname, ' ', tl.lastname) as team_lead_name"),
                     \DB::raw("CONCAT(mgr.firstname, ' ', mgr.lastname) as manager_name"),
                     \DB::raw("CONCAT(hr_emp.firstname, ' ', hr_emp.lastname) as hr_name")
@@ -200,36 +204,22 @@ class AuthController extends Controller
     }
 
 
-   /**
+    /**
      * Retrieve all system user profiles accompanied by employee metrics.
      * GET /api/v1/all-employees
      */
-   /**
-     * Retrieve all system user profiles with context markers for the active user.
-     * GET /api/v1/all-employees
-     */
-    /**
-     * Retrieve all system user profiles with dynamic role filters and context markers.
-     * GET /api/v1/all-employees?role=Employee
-     * GET /api/v1/all-employees?role=2
-     */
-   /**
-     * Retrieve all system user profiles with dynamic role filters, keyword search, and context markers.
-     * GET /api/v1/all-employees?role=Employee&search=Suresh
-     * GET /api/v1/all-employees?search=EMP-2026
-     */
     public function getAllEmployees(Request $request)
-    {
+    { 
         // Get the authenticated user ID from the active Sanctum session token
         $currentUserId = $request->user()?->id;
 
         // Base Query Build
         $query = User::leftJoin(
-                'employees',
-                'employees.user_id',
-                '=',
-                'users.id'
-            )
+            'employees',
+            'employees.user_id',
+            '=',
+            'users.id'
+        )
             ->leftJoin(
                 'roles',
                 'roles.id',
@@ -264,19 +254,19 @@ class AuthController extends Controller
 
         // Fetch records cleanly ordered
         $usersList = $query->select(
-                'users.id as user_id',
-                'users.name as user_display_name',
-                'users.email',
-                'users.phone',
-                'users.role_id',
-                'users.status as user_status',
-                'roles.title as role_name', 
-                'employees.id as employee_id',
-                'employees.unique_id as employee_code',
-                'employees.firstname',
-                'employees.lastname',
-                'employees.emp_status'
-            )
+            'users.id as user_id',
+            'users.name as user_display_name',
+            'users.email',
+            'users.phone',
+            'users.role_id',
+            'users.status as user_status',
+            'roles.title as role_name',
+            'employees.id as employee_id',
+            'employees.unique_id as employee_code',
+            'employees.firstname',
+            'employees.lastname',
+            'employees.emp_status'
+        )
             ->orderBy('users.name', 'asc')
             ->get();
 

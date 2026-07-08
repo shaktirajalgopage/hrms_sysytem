@@ -40,6 +40,19 @@
 
     <section class="row">
         <div class="col-12">
+            @if (session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
+@if (session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
             <div class="card flex-fill">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Employee DataTable</h5>
@@ -58,8 +71,8 @@
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="ex-employees-tab" data-bs-toggle="tab"
-                                data-bs-target="#ex-employees" type="button" role="tab"
-                                aria-controls="ex-employees" aria-selected="false">
+                                data-bs-target="#ex-employees" type="button" role="tab" aria-controls="ex-employees"
+                                aria-selected="false">
                                 Ex-Employees
                                 <span class="badge bg-danger ms-1">{{ $exEmployees->count() }}</span>
                             </button>
@@ -106,7 +119,8 @@
                                                     <form
                                                         action="{{ Auth::user()->role->slug === 'super-admin' ? route('employee.destroy', $employee->id) : (Auth::user()->role->slug === 'administrator' ? route('admin.employee.destroy', $employee->id) : route('hr.employee.destroy', $employee->id)) }}"
                                                         method="post">
-                                                        <a href="#" class="btn btn-danger btn-sm" onclick="del(event, this)">
+                                                        <a href="#" class="btn btn-danger btn-sm"
+                                                            onclick="del(event, this)">
                                                             <i class="fas fa-trash-alt"></i>
                                                         </a>
                                                     </form>
@@ -125,8 +139,7 @@
                         </div>
 
                         <!-- Ex-Employees -->
-                        <div class="tab-pane fade" id="ex-employees" role="tabpanel"
-                            aria-labelledby="ex-employees-tab">
+                        <div class="tab-pane fade" id="ex-employees" role="tabpanel" aria-labelledby="ex-employees-tab">
                             <div class="table-responsive">
                                 <table class="table data-table">
                                     <thead>
@@ -153,7 +166,8 @@
                                                 <td>{{ $employee->schedule->title }}</td>
                                                 <td>{{ $employee->created_at->diffForHumans() }}</td>
                                                 <td>
-                                                    <span class="badge bg-secondary text-uppercase">{{ $employee->emp_status }}</span>
+                                                    <span
+                                                        class="badge bg-secondary text-uppercase">{{ $employee->emp_status }}</span>
                                                 </td>
                                                 <td class="d-flex align-items-center">
                                                     <a href="{{ Auth::user()->role->slug === 'super-admin' ? route('employee.edit', $employee->id) : (Auth::user()->role->slug === 'administrator' ? route('admin.employee.edit', $employee->id) : route('hr.employee.edit', $employee->id)) }}"
@@ -167,7 +181,8 @@
                                                     <form
                                                         action="{{ Auth::user()->role->slug === 'super-admin' ? route('employee.destroy', $employee->id) : (Auth::user()->role->slug === 'administrator' ? route('admin.employee.destroy', $employee->id) : route('hr.employee.destroy', $employee->id)) }}"
                                                         method="post">
-                                                        <a href="#" class="btn btn-danger btn-sm" onclick="del(event, this)">
+                                                        <a href="#" class="btn btn-danger btn-sm"
+                                                            onclick="del(event, this)">
                                                             <i class="fas fa-trash-alt"></i>
                                                         </a>
                                                     </form>
@@ -186,6 +201,59 @@
                         </div>
                     </div>
                 </div>
+                <table class="table data-table">
+                    <thead>
+                        <tr>
+                            <th>SL</th>
+                            <th>Emp ID</th>
+                            <th>Name of Employee</th>
+                            <th>Department</th>
+                            <th>Schedule</th>
+                            <th>Date Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($employees as $employee)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $employee->unique_id }}</td>
+                                <td>
+                                    <strong>{{ $employee->firstname }} {{ $employee->lastname }}</strong>
+                                </td>
+                                <td>{{ $employee->department->title }}</td>
+                                <td>{{ $employee->schedule->title }}</td>
+                                <td>{{ $employee->created_at->diffforhumans() }}</td>
+                                <td class="d-flex align-items-center">
+                                    <a href="{{ Auth::user()->role->slug === 'super-admin' ? route('employee.edit', $employee->id) : (Auth::user()->role->slug === 'administrator' ? route('admin.employee.edit', $employee->id) : route('hr.employee.edit', $employee->id)) }}"
+                                        class="btn btn-info btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ Auth::user()->role->slug === 'super-admin' ? route('employee.show', $employee->id) : (Auth::user()->role->slug === 'administrator' ? route('admin.employee.show', $employee->id) : route('hr.employee.show', $employee->id)) }}"
+                                        class="btn btn-success btn-sm ms-1 me-1">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <form
+                                        action="{{ Auth::user()->role->slug === 'super-admin'
+                                            ? route('employee.destroy', $employee->id)
+                                            : (Auth::user()->role->slug === 'administrator'
+                                                ? route('admin.employee.destroy', $employee->id)
+                                                : route('hr.employee.destroy', $employee->id)) }}"
+                                        method="POST">
+
+                                        @csrf
+                                        @method('DELETE')
+
+                                        <button type="submit" class="btn btn-danger btn-sm"
+                                            onclick="return confirm('Are you sure you want to delete this employee?')">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </section>
