@@ -32,9 +32,7 @@
             <div class="card-body text-center">
 
                 <img
-                    src="{{ $employee->avatar
-                        ? asset('uploads/employees/'.$employee->avatar)
-                        : 'https://via.placeholder.com/180' }}"
+                    src="{{ $employee->avatar ? asset('storage/' . $employee->avatar) : 'https://via.placeholder.com/300x300' }}"
                     class="rounded-circle border"
                     width="180"
                     height="180"
