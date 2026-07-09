@@ -94,17 +94,52 @@
 
                 <div class="col-md-6 mb-2">
                     <strong>Gender:</strong>
-                    {{ $employee->gender }}
+                    @if ($employee->gender == "1")
+                    <span>Male</span>
+                    @else
+                    <span>Female</span>   
+                    @endif
+                    
                 </div>
 
                 <div class="col-md-6 mb-2">
                     <strong>Religion:</strong>
-                    {{ $employee->religion }}
+                    @switch($employee->religion)
+                        @case( $employee->religion == "3")
+                        <span>Hindu</span>
+                       
+                            
+                        @break
+                         @case($employee->religion == "1")
+                         <span>Islam</span>
+                            
+                        @break
+                    
+                        @default
+                        <span>Other</span>
+                            
+                    @endswitch
+                   
                 </div>
 
                 <div class="col-md-6 mb-2">
                     <strong>Marital Status:</strong>
-                    {{ $employee->marital }}
+                    
+                    @switch($employee->marital)
+                        @case( $employee->marital == "1")
+                        <span>Married</span>
+                       
+                            
+                        @break
+                         @case($employee->marital == "2")
+                         <span>Unmarried</span>
+                            
+                        @break
+                    
+                        @default
+                        <span>Unknown</span>
+                            
+                    @endswitch
                 </div>
 
                 <div class="col-12">

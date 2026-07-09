@@ -6,30 +6,52 @@
 @endsection
 
 @section('header')
-    <div class="d-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-3">Manage Employee</h1>
-        <a href="{{ Auth::user()->role->slug === 'super-admin' ? route('employee.create') : (Auth::user()->role->slug === 'administrator' ? route('admin.employee.create') : route('hr.employee.create')) }}"
-            class="btn btn-primary">
-            <i class="fas fa-plus"></i>
-            <span class="ps-1">{{ __('Add New') }}</span>
-        </a>
-        <a href="{{ Auth::user()->role->slug === 'super-admin'
-            ? route('employee.import.form')
-            : (Auth::user()->role->slug === 'hr-manager'
-                ? route('hr.employee.import.form')
-                : route('admin.employee.import.form')) }}"
-            class="btn btn-outline-success">
-            <i data-feather="upload" class="me-1"></i> Bulk Import
-        </a>
-        <a href="{{ Auth::user()->role->slug === 'super-admin'
-            ? route('employee.export')
-            : (Auth::user()->role->slug === 'administrator'
-                ? route('admin.employee.export')
-                : route('hr.employee.export')) }}"
-            class="btn btn-outline-primary">
-            <i data-feather="download" class="me-1"></i> Export to Excel
-        </a>
+    <div class="card shadow-sm border-0 mb-4">
+    <div class="card-body py-3">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+
+            <div>
+                <h3 class="mb-0 fw-bold">Manage Employee</h3>
+                <small class="text-muted">Manage all employee records from here.</small>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+
+                <a href="{{ Auth::user()->role->slug === 'super-admin'
+                    ? route('employee.create')
+                    : (Auth::user()->role->slug === 'administrator'
+                        ? route('admin.employee.create')
+                        : route('hr.employee.create')) }}"
+                    class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>
+                    Add New
+                </a>
+
+                <a href="{{ Auth::user()->role->slug === 'super-admin'
+                    ? route('employee.import.form')
+                    : (Auth::user()->role->slug === 'hr-manager'
+                        ? route('hr.employee.import.form')
+                        : route('admin.employee.import.form')) }}"
+                    class="btn btn-success">
+                    <i data-feather="upload" class="me-1"></i>
+                    Bulk Import
+                </a>
+
+                <a href="{{ Auth::user()->role->slug === 'super-admin'
+                    ? route('employee.export')
+                    : (Auth::user()->role->slug === 'administrator'
+                        ? route('admin.employee.export')
+                        : route('hr.employee.export')) }}"
+                    class="btn btn-outline-primary">
+                    <i data-feather="download" class="me-1"></i>
+                    Export
+                </a>
+
+            </div>
+
+        </div>
     </div>
+</div>
 @endsection
 
 @section('content')
