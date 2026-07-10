@@ -49,6 +49,8 @@ class Employee extends Model
         'emergency_phone',
         'doj',
         'blood_group',
+        'permanent_address',
+        'present_address'
         
     ];
 // Define relationships

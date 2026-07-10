@@ -32,9 +32,7 @@
             <div class="card-body text-center">
 
                 <img
-                    src="{{ $employee->avatar
-                        ? asset('uploads/employees/'.$employee->avatar)
-                        : 'https://via.placeholder.com/180' }}"
+                    src="{{ $employee->avatar ? asset('storage/' . $employee->avatar) : 'https://via.placeholder.com/300x300' }}"
                     class="rounded-circle border"
                     width="180"
                     height="180"
@@ -96,17 +94,52 @@
 
                 <div class="col-md-6 mb-2">
                     <strong>Gender:</strong>
-                    {{ $employee->gender }}
+                    @if ($employee->gender == "1")
+                    <span>Male</span>
+                    @else
+                    <span>Female</span>   
+                    @endif
+                    
                 </div>
 
                 <div class="col-md-6 mb-2">
                     <strong>Religion:</strong>
-                    {{ $employee->religion }}
+                    @switch($employee->religion)
+                        @case( $employee->religion == "3")
+                        <span>Hindu</span>
+                       
+                            
+                        @break
+                         @case($employee->religion == "1")
+                         <span>Islam</span>
+                            
+                        @break
+                    
+                        @default
+                        <span>Other</span>
+                            
+                    @endswitch
+                   
                 </div>
 
                 <div class="col-md-6 mb-2">
                     <strong>Marital Status:</strong>
-                    {{ $employee->marital }}
+                    
+                    @switch($employee->marital)
+                        @case( $employee->marital == "1")
+                        <span>Married</span>
+                       
+                            
+                        @break
+                         @case($employee->marital == "2")
+                         <span>Unmarried</span>
+                            
+                        @break
+                    
+                        @default
+                        <span>Unknown</span>
+                            
+                    @endswitch
                 </div>
 
                 <div class="col-12">
