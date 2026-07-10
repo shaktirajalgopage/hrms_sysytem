@@ -63,7 +63,7 @@ class ProjectController extends Controller
             'members.*' => 'exists:users,id',
         ]);
 
-        $validated['code'] = 'PRJ-'.str_pad((string) (Project::max('id') + 1), 4, '0', STR_PAD_LEFT);
+        $validated['code'] = 'PRJ-' . str_pad((string) (Project::max('id') + 1), 4, '0', STR_PAD_LEFT);
         $validated['created_by'] = Auth::id();
 
         $project = DB::transaction(function () use ($validated, $request) {
@@ -85,11 +85,13 @@ class ProjectController extends Controller
     public function show(Project $project)
     {
         $project->load([
-            'department', 'members', 'creator',
-            'tasks' => fn ($q) => $q->orderBy('sort_order'),
+            'department',
+            'members',
+            'creator',
+            'tasks' => fn($q) => $q->orderBy('sort_order'),
             'tasks.assignee',
             'tasks.comments.user',
-            'tickets' => fn ($q) => $q->latest()->limit(5),
+            'tickets' => fn($q) => $q->latest()->limit(5),
         ]);
 
         $tasksByStatus = $project->tasks->groupBy('status');

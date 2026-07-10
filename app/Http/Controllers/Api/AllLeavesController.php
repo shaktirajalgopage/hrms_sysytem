@@ -40,12 +40,12 @@ class AllLeavesController extends Controller
 
         // 5. FILTER: Date Range (Checks if leave overlaps with requested range)
         if ($request->filled('start_date') || $request->filled('end_date')) {
-            $startDate = $request->filled('start_date') 
-                ? Carbon::parse($request->start_date)->startOfDay() 
+            $startDate = $request->filled('start_date')
+                ? Carbon::parse($request->start_date)->startOfDay()
                 : now()->startOfYear();
-            
-            $endDate = $request->filled('end_date') 
-                ? Carbon::parse($request->end_date)->endOfDay() 
+
+            $endDate = $request->filled('end_date')
+                ? Carbon::parse($request->end_date)->endOfDay()
                 : now()->endOfYear();
 
             $query->where(function ($dateQuery) use ($startDate, $endDate) {
@@ -70,20 +70,25 @@ class AllLeavesController extends Controller
 
         // 7. INDUSTRY STANDARD SUMMARY: Calculate aggregate metrics across the entire FILTERED dataset
         $metricsQuery = clone $query;
+        $todayStart = Carbon::today()->toDateTimeString();
+
         $aggregates = $metricsQuery->selectRaw("
             COUNT(*) as total_requests,
-            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as pending_count,
-            SUM(CASE WHEN status IN (2, 3) THEN 1 ELSE 0 END) as in_progress_count,
+            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as initial_pending_count,
+            SUM(CASE WHEN status IN (2, 3) THEN 1 ELSE 0 END) as pipeline_pending_count,
             SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) as approved_count,
-            SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as rejected_count
-        ")->first();
+            SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as rejected_count,
+            SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as applied_today_count
+        ", [$todayStart])->first();
 
         $summaryBlock = [
             'total_applications' => (int)$aggregates->total_requests,
-            'pending_review'     => (int)$aggregates->pending_count,
-            'approval_pipeline'  => (int)$aggregates->in_progress_count, // TL or Mgr approved but not finalized
-            'fully_approved'     => (int)$aggregates->approved_count,
-            'rejected'           => (int)$aggregates->rejected_count,
+            'today_leave_applied' => (int)$aggregates->applied_today_count,
+            'total_pending'      => (int)($aggregates->initial_pending_count + $aggregates->pipeline_pending_count),
+            'pending_initial'    => (int)$aggregates->initial_pending_count,   // Status 1
+            'pending_pipeline'   => (int)$aggregates->pipeline_pending_count,  // Status 2 or 3 (TL/Manager approved, awaiting finalization)
+            'fully_approved'     => (int)$aggregates->approved_count,          // Status 4
+            'rejected'           => (int)$aggregates->rejected_count,          // Status 0
         ];
 
         // 8. Order and Paginate Results
@@ -122,7 +127,7 @@ class AllLeavesController extends Controller
         $leave = Leave::with([
             'employee.user',
             'currentApprover.user',
-            'histories.approver.user' // Eager-loads the status history timeline details
+            'histories.approver.user'
         ])->find($id);
 
         if (!$leave) {
