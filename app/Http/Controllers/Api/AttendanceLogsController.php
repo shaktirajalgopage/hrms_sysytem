@@ -44,10 +44,11 @@ class AttendanceLogsController extends Controller
                 'attendance_logs.email as email',
                 'attendance_logs.device_type as device_type',
                 'attendance_logs.ip_address as ip_address',
-                'attendance_logs.checkin_at as checkin_at', // Real absolute first check-in timestamp
+                'attendance_logs.checkin_at as checkin_at', 
+                'attendance_logs.checkin_address as checkin_address',
+                'attendance_logs.checkin_status as checkin_status', // Added checkin_status column
                 
                 // --- CUSTOM STATUS STYLE PIPELINE ---
-                // Get the status of the absolute LATEST clock-in cycle of the day
                 DB::raw("(
                     SELECT inner_logs.status 
                     FROM attendance_logs as inner_logs 
@@ -57,8 +58,6 @@ class AttendanceLogsController extends Controller
                 ) as status"),
 
                 // --- CUSTOM CHECKOUT STYLE PIPELINE ---
-                // If the latest cycle is 'active' (no checkout), return NULL. 
-                // Otherwise, return the absolute final checkout timestamp of the day.
                 DB::raw("(
                     SELECT CASE 
                         WHEN (SELECT inner_logs.status FROM attendance_logs as inner_logs WHERE inner_logs.user_id = attendance_logs.user_id AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at) ORDER BY inner_logs.checkin_at DESC LIMIT 1) = 'active' 
@@ -67,13 +66,30 @@ class AttendanceLogsController extends Controller
                     END
                 ) as checkout_at"),
 
+                // --- DYNAMIC CHECKOUT STATUS PIPELINE ---
+                DB::raw("(
+                    SELECT CASE 
+                        WHEN (SELECT inner_logs.status FROM attendance_logs as inner_logs WHERE inner_logs.user_id = attendance_logs.user_id AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at) ORDER BY inner_logs.checkin_at DESC LIMIT 1) = 'active' 
+                        THEN NULL 
+                        ELSE (SELECT inner_checkout.checkout_status FROM attendance_logs as inner_checkout WHERE inner_checkout.user_id = attendance_logs.user_id AND DATE(inner_checkout.checkin_at) = DATE(attendance_logs.checkin_at) ORDER BY inner_checkout.checkout_at DESC LIMIT 1)
+                    END
+                ) as checkout_status"),
+
                 // Sum up cumulative session seconds across all completed cycles throughout the day
                 DB::raw("(
                     SELECT SUM(inner_logs.session_duration) 
                     FROM attendance_logs as inner_logs 
                     WHERE inner_logs.user_id = attendance_logs.user_id 
                     AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at)
-                ) as session_duration")
+                ) as session_duration"),
+
+                // --- MONTHLY TOTAL UNIQUE WORKING DAYS METRIC ---
+                DB::raw("(
+                    SELECT COUNT(DISTINCT DATE(monthly_logs.checkin_at))
+                    FROM attendance_logs as monthly_logs
+                    WHERE monthly_logs.user_id = attendance_logs.user_id
+                    AND DATE(monthly_logs.checkin_at) BETWEEN DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01') AND LAST_DAY(attendance_logs.checkin_at)
+                ) as unique_days_this_month")
             );
 
         // Filter by User Name
@@ -81,6 +97,11 @@ class AttendanceLogsController extends Controller
             $query->whereHas('user', function ($userQuery) use ($request) {
                 $userQuery->where('name', 'LIKE', "%{$request->name}%");
             });
+        }
+
+        // Filter by Check-In Status Parameter (e.g. 'in-office' or 'out-office')
+        if ($request->filled('checkin_status')) {
+            $query->where('attendance_logs.checkin_status', $request->checkin_status);
         }
 
         // Global Fuzzy Search
@@ -93,6 +114,7 @@ class AttendanceLogsController extends Controller
                     $inner->where('attendance_logs.email', 'LIKE', "%{$search}%")
                           ->orWhere('attendance_logs.checkin_address', 'LIKE', "%{$search}%")
                           ->orWhere('attendance_logs.checkout_address', 'LIKE', "%{$search}%")
+                          ->orWhere('attendance_logs.checkin_status', 'LIKE', "%{$search}%")
                           ->orWhere('attendance_logs.device_type', 'LIKE', "%{$search}%");
                 });
             });
@@ -131,7 +153,7 @@ class AttendanceLogsController extends Controller
         ];
 
         // Process File Generation Hash Pipelines
-        $filterHash = md5(json_encode($request->only(['name', 'start_date', 'end_date', 'search'])));
+        $filterHash = md5(json_encode($request->only(['name', 'start_date', 'end_date', 'checkin_status', 'search'])));
         $fileName = "attendance_summary_export_{$filterHash}.csv";
         Storage::disk('public')->makeDirectory('exports');
 
@@ -140,9 +162,9 @@ class AttendanceLogsController extends Controller
             $tempFile = fopen('php://temp', 'r+');
             fprintf($tempFile, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-            fputcsv($tempFile, ['Log Date', 'Employee Name', 'Email Address', 'Status', 'First Check-In Time', 'Last Check-Out Time', 'Total Duration (Seconds)', 'IP Address', 'Device Type']);
+            fputcsv($tempFile, ['Log Date', 'Employee Name', 'Email Address', 'Status', 'First Check-In Time', 'Last Check-Out Time', 'Check-In Status', 'Checkout Status', 'Total Duration (Seconds)', 'IP Address', 'Device Type', 'Check-In Address']);
             foreach ($logs as $log) {
-                fputcsv($tempFile, [$log->log_date, $log->user?->name ?? 'N/A', $log->email, ucfirst($log->status), $log->checkin_at, $log->checkout_at ?? '—', $log->session_duration, $log->ip_address, $log->device_type]);
+                fputcsv($tempFile, [$log->log_date, $log->user?->name ?? 'N/A', $log->email, ucfirst($log->status), $log->checkin_at, $log->checkout_at ?? '—', $log->checkin_status ?? '—', $log->checkout_status ?? '—', $log->session_duration, $log->ip_address, $log->device_type, $log->checkin_address]);
             }
             rewind($tempFile);
             Storage::disk('public')->put("exports/{$fileName}", stream_get_contents($tempFile));
@@ -164,6 +186,11 @@ class AttendanceLogsController extends Controller
             $log->formatted_duration = "{$h}h {$m}m";
             $log->checkin_at = Carbon::parse($log->checkin_at);
             $log->checkout_at = $log->checkout_at ? Carbon::parse($log->checkout_at) : null;
+            $log->days_checked_in_this_month = (int)$log->unique_days_this_month;
+            
+            // Unset raw aggregation bindings to clean up REST API payload output
+            unset($log->unique_days_this_month);
+            
             return $log;
         });
 
@@ -175,6 +202,7 @@ class AttendanceLogsController extends Controller
                 'name' => $request->name ?? 'none',
                 'start_date' => $request->start_date ?? 'today',
                 'end_date' => $request->end_date ?? 'today',
+                'checkin_status' => $request->checkin_status ?? 'all',
                 'search' => $request->search ?? 'none'
             ],
             'summary' => $summaryBlock,
@@ -193,13 +221,8 @@ class AttendanceLogsController extends Controller
      * Fetch detailed diagnostic specs of a singular targeted attendance log block.
      * GET /api/v1/attendance/{id}
      */
- /**
-     * Fetch detailed diagnostic specs of a singular targeted attendance log block.
-     * GET /api/v1/attendance/{id}
-     */
     public function show($id)
     {
-        // 1. Locate the baseline requested log element
         $baseLog = AttendanceLog::find($id);
 
         if (!$baseLog) {
@@ -209,7 +232,6 @@ class AttendanceLogsController extends Controller
             ], 404);
         }
 
-        // 2. Query the exact day boundaries to assemble the enterprise style logic metrics 
         $dailyMetrics = AttendanceLog::with(['user:id,name,email,role_id'])
             ->where('user_id', $baseLog->user_id)
             ->whereRaw('DATE(checkin_at) = DATE(?)', [$baseLog->checkin_at])
@@ -222,11 +244,11 @@ class AttendanceLogsController extends Controller
                 'browser',
                 'platform',
                 'user_agent',
+                'checkin_address',
+                'checkin_status', // Include checkin_status field
                 
-                // Absolute first punch of the day
                 DB::raw("(SELECT MIN(inner_logs.checkin_at) FROM attendance_logs as inner_logs WHERE inner_logs.user_id = attendance_logs.user_id AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at)) as checkin_at"),
                 
-                // Current live status tracking the latest structural segment
                 DB::raw("(
                     SELECT inner_logs.status 
                     FROM attendance_logs as inner_logs 
@@ -235,7 +257,6 @@ class AttendanceLogsController extends Controller
                     ORDER BY inner_logs.checkin_at DESC LIMIT 1
                 ) as status"),
 
-                // Checkout Conditional Rule Pipeline
                 DB::raw("(
                     SELECT CASE 
                         WHEN (SELECT inner_logs.status FROM attendance_logs as inner_logs WHERE inner_logs.user_id = attendance_logs.user_id AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at) ORDER BY inner_logs.checkin_at DESC LIMIT 1) = 'active' 
@@ -244,25 +265,41 @@ class AttendanceLogsController extends Controller
                     END
                 ) as checkout_at"),
 
-                // Sum of cumulative completed durations
+                DB::raw("(
+                    SELECT CASE 
+                        WHEN (SELECT inner_logs.status FROM attendance_logs as inner_logs WHERE inner_logs.user_id = attendance_logs.user_id AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at) ORDER BY inner_logs.checkin_at DESC LIMIT 1) = 'active' 
+                        THEN NULL 
+                        ELSE (SELECT inner_checkout.checkout_status FROM attendance_logs as inner_checkout WHERE inner_checkout.user_id = attendance_logs.user_id AND DATE(inner_checkout.checkin_at) = DATE(attendance_logs.checkin_at) ORDER BY inner_checkout.checkout_at DESC LIMIT 1)
+                    END
+                ) as checkout_status"),
+
                 DB::raw("(
                     SELECT SUM(inner_logs.session_duration) 
                     FROM attendance_logs as inner_logs 
                     WHERE inner_logs.user_id = attendance_logs.user_id 
                     AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at)
-                ) as session_duration")
+                ) as session_duration"),
+
+                DB::raw("(
+                    SELECT COUNT(DISTINCT DATE(monthly_logs.checkin_at))
+                    FROM attendance_logs as monthly_logs
+                    WHERE monthly_logs.user_id = attendance_logs.user_id
+                    AND DATE(monthly_logs.checkin_at) BETWEEN DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01') AND LAST_DAY(attendance_logs.checkin_at)
+                ) as unique_days_this_month")
             )
             ->first();
 
-        // 3. Format telemetry calculations into human-readable strings
         $totalSec = (int)$dailyMetrics->session_duration;
         $h = intdiv($totalSec, 3600);
         $m = intdiv($totalSec % 3600, 60);
         
-        $dailyMetrics->id = $baseLog->id; // Preserve original fallback reference binding
+        $dailyMetrics->id = $baseLog->id; 
         $dailyMetrics->formatted_duration = "{$h}h {$m}m";
         $dailyMetrics->checkin_at = Carbon::parse($dailyMetrics->checkin_at);
         $dailyMetrics->checkout_at = $dailyMetrics->checkout_at ? Carbon::parse($dailyMetrics->checkout_at) : null;
+        $dailyMetrics->days_checked_in_this_month = (int)$dailyMetrics->unique_days_this_month;
+        
+        unset($dailyMetrics->unique_days_this_month);
 
         return response()->json([
             'success' => true,

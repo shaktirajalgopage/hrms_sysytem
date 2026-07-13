@@ -93,7 +93,28 @@ class AllLeavesController extends Controller
 
         // 8. Order and Paginate Results
         $perPage = $request->integer('per_page', 15);
-        $leaves = $query->orderBy('created_at', 'desc')->paginate($perPage);
+$leaves = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+$employeeStats = Leave::selectRaw('
+        employee_id,
+        COUNT(*) as total_leave_applied,
+        SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) as total_leave_approved
+    ')
+    ->groupBy('employee_id')
+    ->get()
+    ->keyBy('employee_id');
+
+$leaves->getCollection()->transform(function ($leave) use ($employeeStats) {
+
+    $stats = $employeeStats[$leave->employee_id] ?? null;
+
+    if ($leave->employee) {
+        $leave->employee->total_leave_applied = (int) ($stats->total_leave_applied ?? 0);
+        $leave->employee->total_leave_approved = (int) ($stats->total_leave_approved ?? 0);
+    }
+
+    return $leave;
+});        
 
         return response()->json([
             'success' => true,
@@ -114,7 +135,7 @@ class AllLeavesController extends Controller
                 'per_page'     => $leaves->perPage(),
                 'current_page' => $leaves->currentPage(),
                 'total_pages'  => $leaves->lastPage()
-            ]
+            ],
         ], 200);
     }
 
