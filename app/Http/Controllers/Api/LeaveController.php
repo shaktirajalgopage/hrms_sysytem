@@ -116,7 +116,7 @@ class LeaveController extends Controller
 
             // --- REAL-TIME EMAIL NOTIFICATION GATE ---
             try {
-                $targetEmail = 'biswajeetswain.algopage@gmail.com';
+                $targetEmail = 'hr@algopage.com';
                 $emailBody = "A new leave request has been submitted by " . ($request->user()->employee->firstname ?? 'N/A') . " " . ($request->user()->employee->lastname ?? 'N/A') . ".\n\n"
                            . "Details:\n"
                            . "Employee ID: {$request->employee_id}\n"

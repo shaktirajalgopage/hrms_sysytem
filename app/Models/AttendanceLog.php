@@ -11,7 +11,7 @@ class AttendanceLog extends Model
         'user_id',
         'name',
         'email',
-        'checkin_latitude',
+        'checkin_latitude', 
         'checkin_longitude',
         'checkin_address',
         'checkin_accuracy',

@@ -46,7 +46,7 @@ class AttendanceLogsController extends Controller
                 'attendance_logs.ip_address as ip_address',
                 'attendance_logs.checkin_at as checkin_at', 
                 'attendance_logs.checkin_address as checkin_address',
-                'attendance_logs.checkin_status as checkin_status', // Added checkin_status column
+                'attendance_logs.checkin_status as checkin_status',
                 
                 // --- CUSTOM STATUS STYLE PIPELINE ---
                 DB::raw("(
@@ -89,7 +89,31 @@ class AttendanceLogsController extends Controller
                     FROM attendance_logs as monthly_logs
                     WHERE monthly_logs.user_id = attendance_logs.user_id
                     AND DATE(monthly_logs.checkin_at) BETWEEN DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01') AND LAST_DAY(attendance_logs.checkin_at)
-                ) as unique_days_this_month")
+                ) as unique_days_this_month"),
+
+                // --- AUTOMATIC CALENDAR SUNDAY COUNTER PIPELINE ---
+                DB::raw("(
+                    FLOOR((DATEDIFF(DATE(attendance_logs.checkin_at), DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01')) + 
+                    WEEKDAY(DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01'))) / 7) + 
+                    CASE WHEN WEEKDAY(DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01')) = 6 THEN 1 ELSE 0 END
+                ) as no_of_sunday"),
+
+                // --- AUTOMATIC HOLIDAY SYSTEM COUNTER PIPELINE ---
+                DB::raw("(
+                    SELECT IFNULL(SUM(no_of_days), 0)
+                    FROM holidays
+                    WHERE status = 1
+                    AND start_date BETWEEN DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01') AND DATE(attendance_logs.checkin_at)
+                ) as no_of_holiday"),
+
+                // --- HOLIDAY NAMES METADATA AGGREGATION PIPELINE ---
+                // Aggregates passed holiday names into a comma-separated string for parsing
+                DB::raw("(
+                    SELECT GROUP_CONCAT(name SEPARATOR ', ')
+                    FROM holidays
+                    WHERE status = 1
+                    AND start_date BETWEEN DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01') AND DATE(attendance_logs.checkin_at)
+                ) as holiday_names_string")
             );
 
         // Filter by User Name
@@ -99,12 +123,13 @@ class AttendanceLogsController extends Controller
             });
         }
 
-        // Filter by Check-In Status Parameter (e.g. 'in-office' or 'out-office')
+        // Filter by Check-In Status Parameter
         if ($request->filled('checkin_status')) {
             $query->where('attendance_logs.checkin_status', $request->checkin_status);
         }
 
         // Global Fuzzy Search
+      // Global Fuzzy Search
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($macroQuery) use ($search) {
@@ -162,9 +187,14 @@ class AttendanceLogsController extends Controller
             $tempFile = fopen('php://temp', 'r+');
             fprintf($tempFile, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-            fputcsv($tempFile, ['Log Date', 'Employee Name', 'Email Address', 'Status', 'First Check-In Time', 'Last Check-Out Time', 'Check-In Status', 'Checkout Status', 'Total Duration (Seconds)', 'IP Address', 'Device Type', 'Check-In Address']);
+            fputcsv($tempFile, ['Log Date', 'Employee Name', 'Email Address', 'Status', 'First Check-In Time', 'Last Check-Out Time', 'Check-In Status', 'Checkout Status', 'Total Duration (Seconds)', 'Sundays', 'Holidays Count', 'Passed Holidays Names', 'Total Days', 'IP Address', 'Device Type', 'Check-In Address']);
             foreach ($logs as $log) {
-                fputcsv($tempFile, [$log->log_date, $log->user?->name ?? 'N/A', $log->email, ucfirst($log->status), $log->checkin_at, $log->checkout_at ?? '—', $log->checkin_status ?? '—', $log->checkout_status ?? '—', $log->session_duration, $log->ip_address, $log->device_type, $log->checkin_address]);
+                $sundays = (int)$log->no_of_sunday;
+                $holidays = (int)$log->no_of_holiday;
+                $totalWorkedDays = (int)$log->unique_days_this_month + $sundays + $holidays;
+                $holidayNames = $log->holiday_names_string ?? 'None';
+                
+                fputcsv($tempFile, [$log->log_date, $log->user?->name ?? 'N/A', $log->email, ucfirst($log->status), $log->checkin_at, $log->checkout_at ?? '—', $log->checkin_status ?? '—', $log->checkout_status ?? '—', $log->session_duration, $sundays, $holidays, $holidayNames, $totalWorkedDays, $log->ip_address, $log->device_type, $log->checkin_address]);
             }
             rewind($tempFile);
             Storage::disk('public')->put("exports/{$fileName}", stream_get_contents($tempFile));
@@ -183,13 +213,25 @@ class AttendanceLogsController extends Controller
             $h = intdiv($totalSec, 3600);
             $m = intdiv($totalSec % 3600, 60);
             
+            $sundays = (int)$log->no_of_sunday;
+            $holidays = (int)$log->no_of_holiday;
+            
             $log->formatted_duration = "{$h}h {$m}m";
             $log->checkin_at = Carbon::parse($log->checkin_at);
             $log->checkout_at = $log->checkout_at ? Carbon::parse($log->checkout_at) : null;
-            $log->days_checked_in_this_month = (int)$log->unique_days_this_month;
             
-            // Unset raw aggregation bindings to clean up REST API payload output
+            // Core Aggregation Rule: unique logged days + automatic Sundays + passed monthly system holidays
+            $log->days_checked_in_this_month = (int)$log->unique_days_this_month + $sundays + $holidays;
+            $log->no_of_sunday = $sundays;
+            $log->no_of_holiday = $holidays;
+            
+            // Transform comma string into a clean array array collection structure
+            $log->passed_holidays = $log->holiday_names_string 
+                ? array_map('trim', explode(',', $log->holiday_names_string)) 
+                : [];
+            
             unset($log->unique_days_this_month);
+            unset($log->holiday_names_string);
             
             return $log;
         });
@@ -245,7 +287,7 @@ class AttendanceLogsController extends Controller
                 'platform',
                 'user_agent',
                 'checkin_address',
-                'checkin_status', // Include checkin_status field
+                'checkin_status',
                 
                 DB::raw("(SELECT MIN(inner_logs.checkin_at) FROM attendance_logs as inner_logs WHERE inner_logs.user_id = attendance_logs.user_id AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at)) as checkin_at"),
                 
@@ -285,7 +327,30 @@ class AttendanceLogsController extends Controller
                     FROM attendance_logs as monthly_logs
                     WHERE monthly_logs.user_id = attendance_logs.user_id
                     AND DATE(monthly_logs.checkin_at) BETWEEN DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01') AND LAST_DAY(attendance_logs.checkin_at)
-                ) as unique_days_this_month")
+                ) as unique_days_this_month"),
+
+                // --- AUTOMATIC CALENDAR SUNDAY COUNTER PIPELINE ---
+                DB::raw("(
+                    FLOOR((DATEDIFF(DATE(attendance_logs.checkin_at), DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01')) + 
+                    WEEKDAY(DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01'))) / 7) + 
+                    CASE WHEN WEEKDAY(DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01')) = 6 THEN 1 ELSE 0 END
+                ) as no_of_sunday"),
+
+                // --- AUTOMATIC HOLIDAY SYSTEM COUNTER PIPELINE ---
+                DB::raw("(
+                    SELECT IFNULL(SUM(no_of_days), 0)
+                    FROM holidays
+                    WHERE status = 1
+                    AND start_date BETWEEN DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01') AND DATE(attendance_logs.checkin_at)
+                ) as no_of_holiday"),
+
+                // --- HOLIDAY NAMES METADATA AGGREGATION PIPELINE ---
+                DB::raw("(
+                    SELECT GROUP_CONCAT(name SEPARATOR ', ')
+                    FROM holidays
+                    WHERE status = 1
+                    AND start_date BETWEEN DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01') AND DATE(attendance_logs.checkin_at)
+                ) as holiday_names_string")
             )
             ->first();
 
@@ -293,13 +358,24 @@ class AttendanceLogsController extends Controller
         $h = intdiv($totalSec, 3600);
         $m = intdiv($totalSec % 3600, 60);
         
+        $sundays = (int)$dailyMetrics->no_of_sunday;
+        $holidays = (int)$dailyMetrics->no_of_holiday;
+
         $dailyMetrics->id = $baseLog->id; 
         $dailyMetrics->formatted_duration = "{$h}h {$m}m";
         $dailyMetrics->checkin_at = Carbon::parse($dailyMetrics->checkin_at);
         $dailyMetrics->checkout_at = $dailyMetrics->checkout_at ? Carbon::parse($dailyMetrics->checkout_at) : null;
-        $dailyMetrics->days_checked_in_this_month = (int)$dailyMetrics->unique_days_this_month;
+        
+        $dailyMetrics->days_checked_in_this_month = (int)$dailyMetrics->unique_days_this_month + $sundays + $holidays;
+        $dailyMetrics->no_of_sunday = $sundays;
+        $dailyMetrics->no_of_holiday = $holidays;
+        
+        $dailyMetrics->passed_holidays = $dailyMetrics->holiday_names_string 
+            ? array_map('trim', explode(',', $dailyMetrics->holiday_names_string)) 
+            : [];
         
         unset($dailyMetrics->unique_days_this_month);
+        unset($dailyMetrics->holiday_names_string);
 
         return response()->json([
             'success' => true,

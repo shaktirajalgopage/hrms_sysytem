@@ -75,7 +75,8 @@
         </div>
     </section>
 
-    <section class="row mt-3 g-3">
+
+    <section class="row mt-1 g-3">
         <div class="col-lg-6 d-flex">
             <div class="card flex-fill w-100 panel-card border-0">
                 <div class="card-header bg-transparent border-0 pt-4 pb-2">
@@ -173,21 +174,13 @@
                                         $daysRemaining = now()->startOfDay()->diffInDays($nextHoliday->start_date);
                                         $remainingText = $daysRemaining === 0 ? __('Today') : ($daysRemaining === 1 ? __('Tomorrow') : __('In :days Days', array('days' => $daysRemaining)));
                                     @endphp
-                                    <div class="holiday-hero-card h-100 active" 
-                                         id="hero-holiday-card"
-                                         role="button"
-                                         data-holiday-date="{{ $nextHoliday->start_date->format('Y-m-d') }}">
-                                        
+                                    <div class="holiday-hero-card h-100 active" id="hero-holiday-card" role="button" data-holiday-date="{{ $nextHoliday->start_date->format('Y-m-d') }}">
                                         <div class="d-flex justify-content-between align-items-start mb-3">
                                             <span class="badge bg-soft-teal text-teal rounded-pill px-2.5 py-1 fw-bold fs-xs" id="hero-badge-label">{{ __('Next Upcoming') }}</span>
                                             <span class="holiday-countdown-tag" id="hero-countdown">{{ $remainingText }}</span>
                                         </div>
-                                        
                                         <h4 class="fw-bold text-dark mb-1 holiday-hero-title" id="hero-title">{{ $nextHoliday->name }}</h4>
-                                        <p class="text-muted small mb-3" id="hero-day-of-week">
-                                            {{ $nextHoliday->start_date->format('l') }}
-                                        </p>
-                                        
+                                        <p class="text-muted small mb-3" id="hero-day-of-week">{{ $nextHoliday->start_date->format('l') }}</p>
                                         <div class="mt-auto d-flex align-items-center justify-content-between border-top border-light-subtle pt-3">
                                             <div class="d-flex align-items-center">
                                                 <div class="hero-date-square me-2">
@@ -224,8 +217,7 @@
                                         <span class="fw-bold text-dark font-monospace" id="calendar-month-label"></span>
                                         <button type="button" class="btn btn-icon-nav" id="next-month-btn"><i class="fa-solid fa-chevron-right"></i></button>
                                     </div>
-                                    <div class="mini-calendar-grid" id="calendar-days-container">
-                                        </div>
+                                    <div class="mini-calendar-grid" id="calendar-days-container"></div>
                                 </div>
                             </div>
                         </div>
@@ -236,12 +228,8 @@
                                     <div class="pt-2 pb-1 font-monospace text-muted fs-2xs text-uppercase tracking-wider border-bottom mb-2">{{ __('Remaining Schedule') }}</div>
                                     <div class="holiday-timeline-feed">
                                         @foreach($remainingHolidays as $holiday)
-                                            @php
-                                                $remDays = now()->startOfDay()->diffInDays($holiday->start_date);
-                                            @endphp
-                                            <div class="timeline-holiday-item" 
-                                                 data-holiday-date="{{ $holiday->start_date->format('Y-m-d') }}"
-                                                 role="button">
+                                            @php $remDays = now()->startOfDay()->diffInDays($holiday->start_date); @endphp
+                                            <div class="timeline-holiday-item" data-holiday-date="{{ $holiday->start_date->format('Y-m-d') }}" role="button">
                                                 <div class="timeline-left">
                                                     <div class="timeline-dot"></div>
                                                     <div class="timeline-badge">
@@ -276,13 +264,7 @@
 
                 @if($remainingHolidays->count() > 0)
                     <div class="card-footer bg-transparent border-0 px-4 pb-3 pt-0">
-                        <button class="btn btn-view-all-holidays w-100 d-flex align-items-center justify-content-center collapsed" 
-                                type="button" 
-                                data-bs-toggle="collapse" 
-                                data-bs-target="#allHolidaysCollapse" 
-                                aria-expanded="false" 
-                                aria-controls="allHolidaysCollapse"
-                                id="toggle-holidays-btn">
+                        <button class="btn btn-view-all-holidays w-100 d-flex align-items-center justify-content-center collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#allHolidaysCollapse" aria-expanded="false" aria-controls="allHolidaysCollapse" id="toggle-holidays-btn">
                             <span>{{ __('View All System Holidays') }}</span>
                             <i class="fa-solid fa-chevron-down ms-2 transition-transform"></i>
                         </button>
@@ -421,6 +403,178 @@
             </div>
         </div>
     </section>
+
+     @php
+        $filterStartDate = request('attendance_start_date', now()->format('Y-m-d'));
+        $filterEndDate = request('attendance_end_date', now()->format('Y-m-d'));
+
+        $firstLogIds = DB::table('attendance_logs')
+            ->select(DB::raw('MIN(id) as first_id'))
+            ->whereBetween('checkin_at', [
+                Carbon\Carbon::parse($filterStartDate)->startOfDay(), 
+                Carbon\Carbon::parse($filterEndDate)->endOfDay()
+            ])
+            ->groupBy('user_id', DB::raw('DATE(checkin_at)'));
+
+        $attendanceLogs = App\Models\AttendanceLog::with(['user:id,name,email'])
+            ->joinSub($firstLogIds, 'first_logs', function ($join) {
+                $join->on('attendance_logs.id', '=', 'first_logs.first_id');
+            })
+            ->select(
+                'attendance_logs.*',
+                DB::raw("(
+                    SELECT inner_logs.status FROM attendance_logs as inner_logs 
+                    WHERE inner_logs.user_id = attendance_logs.user_id 
+                    AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at)
+                    ORDER BY inner_logs.checkin_at DESC LIMIT 1
+                ) as latest_calculated_status"),
+                DB::raw("(
+                    SELECT CASE 
+                        WHEN (SELECT inner_logs.status FROM attendance_logs as inner_logs WHERE inner_logs.user_id = attendance_logs.user_id AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at) ORDER BY inner_logs.checkin_at DESC LIMIT 1) = 'active' 
+                        THEN NULL 
+                        ELSE (SELECT MAX(inner_logs.checkout_at) FROM attendance_logs as inner_logs WHERE inner_logs.user_id = attendance_logs.user_id AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at))
+                    END
+                ) as unified_checkout_at"),
+                DB::raw("(
+                    SELECT SUM(inner_logs.session_duration) FROM attendance_logs as inner_logs 
+                    WHERE inner_logs.user_id = attendance_logs.user_id 
+                    AND DATE(inner_logs.checkin_at) = DATE(attendance_logs.checkin_at)
+                ) as aggregated_duration"),
+                DB::raw("(
+                    SELECT COUNT(DISTINCT DATE(monthly_logs.checkin_at)) FROM attendance_logs as monthly_logs
+                    WHERE monthly_logs.user_id = attendance_logs.user_id
+                    AND DATE(monthly_logs.checkin_at) BETWEEN DATE_FORMAT(attendance_logs.checkin_at, '%Y-%m-01') AND LAST_DAY(attendance_logs.checkin_at)
+                ) as distinct_monthly_presence")
+            )
+            ->orderBy('attendance_logs.checkin_at', 'desc');
+
+        $totalDaysInMonth = Carbon\Carbon::parse($filterStartDate)->daysInMonth;
+        
+        // Dynamic visibility constraint: 5 items shown on dashboard baseline context route
+        $isViewAll = request('view_all_attendance') === 'true';
+        $attendanceDataCollection = $isViewAll ? $attendanceLogs->get() : $attendanceLogs->take(5)->get();
+    @endphp
+
+    <section class="row mt-3">
+        <div class="col-12">
+            <div class="card panel-card border-0 flex-fill w-100">
+                <div class="card-header bg-transparent border-0 pt-4 pb-2">
+                    <form method="GET" action="{{ url()->current() }}" class="row align-items-center g-2 m-0 w-100">
+                        @foreach(request()->except(['attendance_start_date', 'attendance_end_date', 'view_all_attendance']) as $k => $v)
+                            <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                        @endforeach
+                        <div class="col-sm-4 col-md-3">
+                            <h5 class="card-title mb-0 fw-bold">{{ __('Live Attendance Tracker') }}</h5>
+                        </div>
+                        <div class="col-6 col-sm-3 col-md-3 ms-auto">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-calendar-day fs-xs"></i></span>
+                                <input type="date" name="attendance_start_date" class="form-control form-control-sm border-start-0" value="{{ $filterStartDate }}">
+                            </div>
+                        </div>
+                        <div class="col-6 col-sm-3 col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-calendar-check fs-xs"></i></span>
+                                <input type="date" name="attendance_end_date" class="form-control form-control-sm border-start-0" value="{{ $filterEndDate }}">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary btn-sm px-3 rounded-pill">{{ __('Filter') }}</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 modern-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('Employee') }}</th>
+                                    <th>{{ __('Monthly Metric') }}</th>
+                                    <th>{{ __('First Check-In') }}</th>
+                                    <th>{{ __('Last Check-Out') }}</th>
+                                    <th>{{ __('Check-In Status') }}</th>
+                                    <th>{{ __('Total Duration') }}</th>
+                                    <th>{{ __('Tracking Status') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($attendanceDataCollection as $log)
+                                    @php
+                                        $h = intdiv((int)$log->aggregated_duration, 3600);
+                                        $m = intdiv((int)$log->aggregated_duration % 3600, 60);
+                                        $displayDuration = $h > 0 ? "{$h}h {$m}m" : "{$m}m";
+                                        $isSessionActive = $log->latest_calculated_status === 'active';
+                                    @endphp
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-fallback me-2">{{ strtoupper(substr($log->user->name ?? '?', 0, 1)) }}</div>
+                                                <div>
+                                                    <span class="text-dark fw-bold d-block">{{ $log->user->name ?? 'System Guest' }}</span>
+                                                    <span class="text-muted fs-3xs">{{ $log->email }}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-soft-primary text-primary border rounded-pill px-2.5 font-monospace fs-2xs">
+                                                {{ $log->distinct_monthly_presence }}/{{ $totalDaysInMonth }} Days
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="lh-sm">
+                                                <span class="text-dark d-block fw-semibold small">{{ $log->checkin_at ? $log->checkin_at->format('h:i A') : '—' }}</span>
+                                                <span class="text-muted fs-3xs">{{ $log->checkin_at ? $log->checkin_at->format('d M Y') : '' }}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="lh-sm">
+                                                @if($isSessionActive)
+                                                    <span class="text-warning fw-bold small"><i class="fa-solid fa-spinner fa-spin me-1"></i>{{ __('On Duty') }}</span>
+                                                @else
+                                                    <span class="text-dark d-block fw-semibold small">{{ $log->unified_checkout_at ? Carbon\Carbon::parse($log->unified_checkout_at)->format('h:i A') : '—' }}</span>
+                                                    <span class="text-muted fs-3xs">{{ $log->unified_checkout_at ? Carbon\Carbon::parse($log->unified_checkout_at)->format('d M Y') : '' }}</span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-soft-{{ $log->checkin_status === 'in-office' ? 'success' : 'secondary' }} text-{{ $log->checkin_status === 'in-office' ? 'success' : 'secondary' }} rounded-pill px-2">
+                                                {{ $log->checkin_status ?? 'Standard' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="font-monospace text-dark fw-bold small">{{ $isSessionActive && !$log->aggregated_duration ? '—' : $displayDuration }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-soft-{{ $isSessionActive ? 'warning' : 'success' }} text-{{ $isSessionActive ? 'warning' : 'success' }} rounded-pill px-2">
+                                                {{ $isSessionActive ? 'ACTIVE' : 'COMPLETED' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted small"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ __('No custom attendance log data parsed inside this timeline.') }}</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 px-4 pb-4 pt-0 text-center">
+                    @if($isViewAll)
+                        <a href="{{ request()->fullUrlWithQuery(['view_all_attendance' => 'false']) }}" class="btn btn-view-all-holidays w-100 py-2 font-semibold">
+                            <span>{{ __('Collapse Ledger View') }}</span>
+                            <i class="fa-solid fa-chevron-up ms-2"></i>
+                        </a>
+                    @else
+                        <a href="{{ request()->fullUrlWithQuery(['view_all_attendance' => 'true']) }}" class="btn btn-view-all-holidays w-100 py-2 font-semibold">
+                            <span>{{ __('View Entire System Attendance Records') }}</span>
+                            <i class="fa-solid fa-chevron-down ms-2"></i>
+                        </a>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </section>
 @endsection
 
 @section('script')
@@ -442,7 +596,6 @@
 
     body { background-color: #f5f7fb; }
 
-    /* Premium Panels Override */
     .panel-card {
         border-radius: var(--radius-premium) !important;
         box-shadow: 0 4px 20px rgba(20, 30, 60, 0.03) !important;
@@ -450,7 +603,6 @@
         border: 1px solid rgba(0, 0, 0, 0.01) !important;
     }
 
-    /* Stat cards */
     .stat-card {
         position: relative;
         border-radius: var(--radius-premium);
@@ -464,7 +616,6 @@
     }
     .stat-label { color: var(--c-muted); font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
     .stat-number { color: var(--c-ink); font-weight: 700; }
-    .stat-link { z-index: 1; }
     .stat-icon {
         width: 48px; height: 48px; border-radius: 12px;
         display: flex; align-items: center; justify-content: center;
@@ -484,251 +635,85 @@
     .panel-icon-teal { background: rgba(15,181,174,.15); color: var(--c-teal); }
     .panel-icon-pink { background: rgba(232,93,158,.15); color: var(--c-pink); }
 
-    /* Announcement feed */
+    .avatar-fallback {
+        width: 34px; height: 34px; border-radius: 50%;
+        background: rgba(59, 125, 221, 0.1); color: var(--c-primary);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 0.85rem;
+    }
+
     .notification-feed { max-height: 420px; overflow-y: auto; padding-right: 4px; }
     .notification-feed::-webkit-scrollbar { width: 6px; }
     .notification-feed::-webkit-scrollbar-thumb { background: #dfe4ee; border-radius: 10px; }
+    
     .announcement-item {
-        display: flex; gap: 14px;
-        padding: 14px;
-        margin-bottom: 10px;
-        border: 1px solid var(--c-border);
-        border-radius: 14px;
-        background: #fff;
-        cursor: pointer;
+        display: flex; gap: 14px; padding: 14px; margin-bottom: 10px;
+        border: 1px solid var(--c-border); border-radius: 14px;
+        background: #fff; cursor: pointer;
         transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
     }
     .announcement-item:hover { box-shadow: 0 6px 18px rgba(20,30,60,.06); transform: translateY(-1px); }
-    .announcement-item:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
-    .announcement-item.is-expanded {
-        border-color: rgba(59,125,221,.35);
-        box-shadow: 0 8px 22px rgba(20,30,60,.08);
-        background: #fbfcff;
-    }
-    .announcement-icon {
-        flex: 0 0 auto;
-        width: 40px; height: 40px; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-    }
+    .announcement-item.is-expanded { border-color: rgba(59,125,221,.35); box-shadow: 0 8px 22px rgba(20,30,60,.08); background: #fbfcff; }
+    .announcement-icon { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
     .announcement-body { flex: 1; min-width: 0; }
     .announcement-time { font-size: .72rem; color: var(--c-muted); white-space: nowrap; }
-    .announcement-chevron {
-        font-size: .68rem; color: var(--c-muted);
-        transition: transform .25s ease;
-    }
+    .announcement-chevron { font-size: .68rem; color: var(--c-muted); transition: transform .25s ease; }
     .announcement-item.is-expanded .announcement-chevron { transform: rotate(180deg); color: var(--c-primary); }
     .announcement-preview { display: block; margin-bottom: 0; }
     .announcement-item.is-expanded .announcement-preview { display: none; }
-    .announcement-full {
-        display: none;
-        line-height: 1.55;
-        animation: fadeIn .2s ease;
-    }
+    .announcement-full { display: none; line-height: 1.55; animation: fadeIn .2s ease; }
     .announcement-item.is-expanded .announcement-full { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
-    .announcement-cta {
-        font-size: .78rem; font-weight: 600; color: var(--c-primary);
-        text-decoration: none;
-    }
+    .announcement-cta { font-size: .78rem; font-weight: 600; color: var(--c-primary); text-decoration: none; }
     .announcement-cta:hover { text-decoration: underline; }
 
-    /* Holiday layout styling */
     .holiday-hero-card {
         background: linear-gradient(135deg, #ffffff 0%, #f9fbfb 100%);
-        border: 2px solid var(--c-border);
-        border-radius: 14px;
-        padding: 18px;
-        display: flex;
-        flex-direction: column;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        border: 2px solid var(--c-border); border-radius: 14px;
+        padding: 18px; display: flex; flex-direction: column;
+        cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         position: relative;
     }
-    .holiday-hero-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(15, 181, 174, 0.06);
-    }
-    .holiday-hero-card.active {
-        border-color: var(--c-teal);
-        background: linear-gradient(135deg, #ffffff 0%, rgba(15, 181, 174, 0.02) 100%);
-        box-shadow: 0 8px 25px rgba(15, 181, 174, 0.08);
-    }
-    .holiday-countdown-tag {
-        font-size: 0.72rem;
-        font-weight: 700;
-        color: #fff;
-        background-color: var(--c-teal);
-        padding: 3px 10px;
-        border-radius: 999px;
-    }
-    .hero-date-square {
-        width: 44px;
-        height: 44px;
-        background: rgba(15, 181, 174, 0.08);
-        border-radius: 10px;
-        color: var(--c-teal);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        line-height: 1;
-    }
+    .holiday-hero-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(15, 181, 174, 0.06); }
+    .holiday-hero-card.active { border-color: var(--c-teal); background: linear-gradient(135deg, #ffffff 0%, rgba(15, 181, 174, 0.02) 100%); box-shadow: 0 8px 25px rgba(15, 181, 174, 0.08); }
+    .holiday-countdown-tag { font-size: 0.72rem; font-weight: 700; color: #fff; background-color: var(--c-teal); padding: 3px 10px; border-radius: 999px; }
+    .hero-date-square { width: 44px; height: 44px; background: rgba(15, 181, 174, 0.08); border-radius: 10px; color: var(--c-teal); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
     .tracking-wider { letter-spacing: 0.06em; }
 
-    .mini-calendar {
-        background: #ffffff;
-        border: 1px solid var(--c-border);
-        border-radius: 14px;
-        padding: 16px;
-    }
-    .btn-icon-nav {
-        background: transparent;
-        border: none;
-        padding: 4px 8px;
-        color: var(--c-muted);
-        border-radius: 6px;
-        transition: all 0.2s;
-    }
-    .btn-icon-nav:hover {
-        background: #f1f3f7;
-        color: var(--c-ink);
-    }
-    .mini-calendar-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 2px;
-        text-align: center;
-    }
-    .mini-calendar-dow {
-        font-size: 0.65rem;
-        font-weight: 700;
-        color: var(--c-muted);
-        text-transform: uppercase;
-        padding-bottom: 6px;
-    }
-    .mini-calendar-cell {
-        font-size: 0.75rem;
-        font-weight: 500;
-        color: #4b5563;
-        height: 28px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        border-radius: 6px;
-        position: relative;
-        transition: all 0.2s;
-    }
-    .mini-calendar-cell:not(.empty):not(.is-muted-month) {
-        cursor: pointer;
-    }
-    .mini-calendar-cell:not(.empty):not(.is-muted-month):hover {
-        background: #f1f5f9;
-    }
+    .mini-calendar { background: #ffffff; border: 1px solid var(--c-border); border-radius: 14px; padding: 16px; }
+    .btn-icon-nav { background: transparent; border: none; padding: 4px 8px; color: var(--c-muted); border-radius: 6px; transition: all 0.2s; }
+    .btn-icon-nav:hover { background: #f1f3f7; color: var(--c-ink); }
+    .mini-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+    .mini-calendar-dow { font-size: 0.65rem; font-weight: 700; color: var(--c-muted); text-transform: uppercase; padding-bottom: 6px; }
+    .mini-calendar-cell { font-size: 0.75rem; font-weight: 500; color: #4b5563; height: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 6px; position: relative; transition: all 0.2s; }
+    .mini-calendar-cell:not(.empty):not(.is-muted-month) { cursor: pointer; }
+    .mini-calendar-cell:not(.empty):not(.is-muted-month):hover { background: #f1f5f9; }
     .mini-calendar-cell.empty { visibility: hidden; }
     .mini-calendar-cell.is-muted-month { color: #d1d5db; }
-    .mini-calendar-cell.is-today {
-        background: rgba(59, 125, 221, 0.08);
-        font-weight: 700;
-        color: var(--c-primary);
-    }
+    .mini-calendar-cell.is-today { background: rgba(59, 125, 221, 0.08); font-weight: 700; color: var(--c-primary); }
     
-    .mini-calendar-cell.has-holiday::after {
-        content: '';
-        position: absolute;
-        bottom: 3px;
-        width: 4px;
-        height: 4px;
-        border-radius: 50%;
-        background-color: var(--c-teal);
-    }
-    .mini-calendar-cell.has-holiday.selected-active {
-        background-color: var(--c-teal) !important;
-        color: #ffffff !important;
-        font-weight: 700;
-    }
-    .mini-calendar-cell.has-holiday.selected-active::after {
-        background-color: #ffffff !important;
-    }
+    .mini-calendar-cell.has-holiday::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background-color: var(--c-teal); }
+    .mini-calendar-cell.has-holiday.selected-active { background-color: var(--c-teal) !important; color: #ffffff !important; font-weight: 700; }
+    .mini-calendar-cell.has-holiday.selected-active::after { background-color: #ffffff !important; }
 
-    .holiday-timeline-feed {
-        display: flex;
-        flex-direction: column;
-        max-height: 240px;
-        overflow-y: auto;
-        padding-right: 4px;
-    }
+    .holiday-timeline-feed { display: flex; flex-direction: column; max-height: 240px; overflow-y: auto; padding-right: 4px; }
     .holiday-timeline-feed::-webkit-scrollbar { width: 4px; }
     .holiday-timeline-feed::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     
-    .timeline-holiday-item {
-        display: flex;
-        gap: 12px;
-        padding: 10px;
-        border-radius: 10px;
-        border: 1px solid transparent;
-        transition: all 0.2s ease;
-        cursor: pointer;
-        margin-bottom: 4px;
-    }
-    .timeline-holiday-item:hover {
-        background: #f8fafc;
-        border-color: var(--c-border);
-    }
-    .timeline-holiday-item.active {
-        background-color: rgba(15, 181, 174, 0.02);
-        border-color: rgba(15, 181, 174, 0.2);
-    }
-    .timeline-left {
-        display: flex;
-        align-items: center;
-        position: relative;
-    }
-    .timeline-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: #cbd5e1;
-        position: absolute;
-        left: -12px;
-    }
-    .timeline-holiday-item.active .timeline-dot {
-        background: var(--c-teal);
-        box-shadow: 0 0 0 3px rgba(15, 181, 174, 0.2);
-    }
-    .timeline-badge {
-        width: 38px;
-        height: 38px;
-        background: #f1f5f9;
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        line-height: 1.1;
-    }
+    .timeline-holiday-item { display: flex; gap: 12px; padding: 10px; border-radius: 10px; border: 1px solid transparent; transition: all 0.2s ease; cursor: pointer; margin-bottom: 4px; }
+    .timeline-holiday-item:hover { background: #f8fafc; border-color: var(--c-border); }
+    .timeline-holiday-item.active { background-color: rgba(15, 181, 174, 0.02); border-color: rgba(15, 181, 174, 0.2); }
+    .timeline-left { display: flex; align-items: center; position: relative; }
+    .timeline-dot { width: 6px; height: 6px; border-radius: 50%; background: #cbd5e1; position: absolute; left: -12px; }
+    .timeline-holiday-item.active .timeline-dot { background: var(--c-teal); box-shadow: 0 0 0 3px rgba(15, 181, 174, 0.2); }
+    .timeline-badge { width: 38px; height: 38px; background: #f1f5f9; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
     .timeline-badge span { font-size: 0.8rem; }
     .timeline-badge span.text-uppercase { font-size: 0.55rem; font-weight: 700; }
     .timeline-body { flex: 1; min-width: 0; }
     .timeline-title { font-size: 0.85rem; }
 
-    .btn-view-all-holidays {
-        background: #f8fafc;
-        border: 1px solid var(--c-border);
-        color: #475569;
-        font-size: 0.8rem;
-        font-weight: 600;
-        padding: 8px 16px;
-        border-radius: 10px;
-        transition: all 0.2s ease;
-    }
-    .btn-view-all-holidays:hover {
-        background: #f1f5f9;
-        color: var(--c-ink);
-    }
-    .btn-view-all-holidays:not(.collapsed) i {
-        transform: rotate(180deg);
-    }
+    .btn-view-all-holidays { background: #f8fafc; border: 1px solid var(--c-border); color: #475569; font-size: 0.8rem; font-weight: 600; padding: 8px 16px; border-radius: 10px; transition: all 0.2s ease; }
+    .btn-view-all-holidays:hover { background: #f1f5f9; color: var(--c-ink); }
 
     .fs-2xs { font-size: 0.68rem; }
     .fs-3xs { font-size: 0.62rem; }
@@ -740,10 +725,7 @@
     .empty-state i { font-size: 1.6rem; margin-bottom: 8px; display: block; opacity: .5; }
     .empty-state p { font-size: .85rem; }
 
-    .modern-table thead th {
-        font-size: .72rem; text-transform: uppercase; letter-spacing: .03em;
-        color: var(--c-muted); font-weight: 700; border-bottom: 1px solid var(--c-border);
-    }
+    .modern-table thead th { font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; color: var(--c-muted); font-weight: 700; border-bottom: 1px solid var(--c-border); }
     .modern-table tbody tr { border-bottom: 1px solid var(--c-border); }
     .modern-table tbody tr:last-child { border-bottom: none; }
 
@@ -761,7 +743,6 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // --- Announcement Dropdown Logic ---
         document.querySelectorAll('[data-announcement-toggle]').forEach(function (item) {
             function toggle() { item.classList.toggle('is-expanded'); }
             item.addEventListener('click', toggle);
@@ -770,7 +751,6 @@
             });
         });
 
-        // --- Core HRMS Calendar Engine ---
         const holidayDataset = @json($mappedHolidaysArray);
 
         let currentNavDate = new Date();
@@ -850,11 +830,9 @@
             currentNavDate = new Date(dateStr);
             renderCalendar(currentNavDate);
 
-            // Fetch the holiday item details from dataset to refresh the layout fields dynamically
             const activeHoliday = holidayDataset.find(h => h.date === dateStr);
 
             if (activeHoliday) {
-                // Update text elements inside the Hero panel layout structure
                 const hTitle = document.getElementById('hero-title');
                 const hCountdown = document.getElementById('hero-countdown');
                 const hDayOfWeek = document.getElementById('hero-day-of-week');
@@ -872,7 +850,6 @@
                 if (hDateRange) hDateRange.textContent = activeHoliday.date_range;
                 if (hDuration) hDuration.textContent = activeHoliday.duration_text;
 
-                // Dynamically tag context if selected holiday isn't the base next index
                 if (hBadgeLabel) {
                     if (holidayDataset.length > 0 && holidayDataset[0].date === dateStr) {
                         hBadgeLabel.textContent = "{{ __('Next Upcoming') }}";
@@ -884,12 +861,7 @@
 
             const heroCard = document.getElementById('hero-holiday-card');
             if (heroCard) {
-                if (heroCard.getAttribute('data-holiday-date') === dateStr) {
-                    heroCard.classList.add('active');
-                } else {
-                    // Stay highlighted if it's currently holding our selection state context
-                    heroCard.classList.add('active');
-                }
+                heroCard.classList.add('active');
             }
 
             document.querySelectorAll('.timeline-holiday-item').forEach(item => {

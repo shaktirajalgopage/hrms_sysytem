@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Jenssegers\Agent\Agent;
+use Carbon\carbon;
 
 class UserAttendanceController extends Controller
 {
@@ -137,17 +138,42 @@ class UserAttendanceController extends Controller
     // GET /api/attendance/status
     // Returns the current active session (if any) for the authenticated user.
     // ─────────────────────────────────────────────────────────────────────────
+   // ─────────────────────────────────────────────────────────────────────────
+    // GET /api/attendance/status
+    // Returns the current active session or custom calendar state (Sunday/Holiday)
+    // ─────────────────────────────────────────────────────────────────────────
     public function status(Request $request): JsonResponse
     {
-        $user      = $request->user();
+        $user = $request->user();
+        $today = now()->startOfDay();
+
+        // 1. Evaluate for active checked-in sessions first
         $activeLog = AttendanceLog::where('user_id', $user->id)
             ->active()
             ->latest('checkin_at')
             ->first();
 
+        // 2. Compute calendar tracking infrastructure state context
+        $holidayName = null;
+        $isSunday = now()->dayOfWeek === Carbon::SUNDAY;
+
+        // Query active system holidays falling within today's date boundaries
+        $activeHoliday = \App\Models\Holiday::where('status', true)
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->first();
+
+        if ($activeHoliday) {
+            $holidayName = $activeHoliday->name;
+        }
+
         return $this->success('Status fetched successfully.', [
-            'is_checked_in' => (bool) $activeLog,
-            'active_session'=> $activeLog ? [
+            'is_checked_in'   => (bool) $activeLog,
+            'is_sunday'       => $isSunday,
+            'is_holiday'      => (bool) $holidayName,
+            'holiday_name'    => $holidayName,
+            'calendar_label'  => $holidayName ?: ($isSunday ? 'Sunday' : 'Standard Working Day'),
+            'active_session'  => $activeLog ? [
                 'log_id'          => $activeLog->id,
                 'checkin_at'      => $activeLog->checkin_at->toIso8601String(),
                 'checkin_status'  => $activeLog->checkin_status,
